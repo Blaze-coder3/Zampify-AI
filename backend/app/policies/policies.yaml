@@ -1,0 +1,26 @@
+# config/policies.yaml
+# This file is versioned. Every change must increment the version number.
+# When deployed, this config is snapshotted into the policy_versions table.
+
+policy_metadata:
+  version: "1.2.0"
+  effective_date: "2026-01-01"
+  approved_by: "AP Manager"
+  changelog: "Initial policy configuration for Zampify AI MVP"
+
+company_policy:
+  tolerance_percentage: 2.0          # ±2% variance allowed on PO matching
+  duplicate_window_days: 90          # Check duplicates within 90-day window
+  ocr_confidence_threshold: 80.0     # Below this → human review
+  max_auto_approval_amount: 5000.0   # Above this → manager approval required
+  split_invoice_enabled: true        # Allow partial billing against POs
+
+tax_policy:
+  default_tax_rate: 10.0             # Expected tax rate (%)
+  tax_tolerance_percentage: 0.5      # ±0.5% tolerance on tax calculation
+
+fraud_detection:
+  velocity_window_hours: 24          # Check for rapid-fire submissions
+  velocity_max_invoices: 3           # Max invoices from same vendor in window
+  amount_just_below_threshold: true  # Flag amounts just under approval limit
+  threshold_skirting_range_pct: 5.0  # Flag if amount is within 5% below auto-approval limit

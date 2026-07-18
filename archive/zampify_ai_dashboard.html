@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zampify AI Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent body scroll, handle internally */
+        }
+        
+        /* Utility class for document highlight boxes */
+        .doc-highlight {
+            position: absolute;
+            border: 2px solid;
+            background-color: rgba(0, 255, 0, 0.1);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        .doc-highlight.green { border-color: #22c55e; background-color: rgba(34, 197, 94, 0.1); }
+        .doc-highlight.blue { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
+        
+        /* Progress ring for story points */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind Config for specific colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            DEFAULT: '#2563eb', // blue-600
+                            dark: '#1e3a8a', // blue-900 for sidebar bg
+                            light: '#dbeafe', // blue-100
+                        },
+                        sidebar: '#0f172a', // slate-900
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased h-screen flex flex-col">
+
+    <div id="root" class="flex flex-col h-full w-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Mock Data ---
+        const mockInvoices = [
+            { id: 'INV-1021', vendor: 'Dell Technologies', amount: 3200.00, stage: 'Three-Way Match', risk: 'High', priority: 'High', assigned: 'Me', age: '5m' },
+            { id: 'INV-1020', vendor: 'Accenture', amount: 12500.00, stage: 'Price Variance', risk: 'Medium', priority: 'High', assigned: 'Unassigned', age: '12m' },
+            { id: 'INV-1019', vendor: 'Staples Inc.', amount: 450.75, stage: 'Duplicate Check', risk: 'Low', priority: 'Medium', assigned: 'Me', age: '15m' },
+            { id: 'INV-1018', vendor: 'ABC Supplies', amount: 789.20, stage: 'Needs Review', risk: 'High', priority: 'High', assigned: 'Unassigned', age: '18m' },
+            { id: 'INV-1017', vendor: 'Global Office', amount: 2150.00, stage: 'PO Match', risk: 'Low', priority: 'Low', assigned: 'John D.', age: '22m' },
+            { id: 'INV-1016', vendor: 'Tech Mahindra', amount: 5600.00, stage: 'Three-Way Match', risk: 'High', priority: 'High', assigned: 'Me', age: '30m' },
+            { id: 'INV-1015', vendor: 'Amazon Business', amount: 320.40, stage: 'Tax Validation', risk: 'Low', priority: 'Low', assigned: 'Unassigned', age: '35m' },
+            { id: 'INV-1014', vendor: 'Wipro Limited', amount: 8900.00, stage: 'Needs Review', risk: 'Medium', priority: 'Medium', assigned: 'Sarah K.', age: '42m' },
+            { id: 'INV-1013', vendor: 'Office Depot', amount: 110.00, stage: 'Duplicate Check', risk: 'Low', priority: 'Low', assigned: 'Me', age: '1h' },
+            { id: 'INV-1012', vendor: 'Tata Communications', amount: 1230.00, stage: 'Price Variance', risk: 'Medium', priority: 'Medium', assigned: 'Unassigned', age: '1h 10m' },
+        ];
+
+        const pipelineStages = [
+            { name: 'Email Ingest', count: 125, icon: 'Mail', active: false },
+            { name: 'OCR', count: 125, icon: 'ScanText', active: false },
+            { name: 'Extraction', count: 124, icon: 'FileText', active: false },
+            { name: 'Validation', count: 14, icon: 'ShieldCheck', active: true }, // Current stage in mock
+            { name: 'Decision', count: '-', icon: 'Gavel', active: false },
+            { name: 'Notification', count: '-', icon: 'Bell', active: false },
+        ];
+
+        // --- Icons Component Helper ---
+        // Simple wrapper to render Lucide icons easily in React
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const iconHtml = `<i data-lucide="${name}" class="${className}" style="width: ${size}px; height: ${size}px;"></i>`;
+            return <span dangerouslySetInnerHTML={{ __html: iconHtml }} className="inline-flex items-center justify-center" />;
+        };
+
+        // --- Components ---
+
+        const TopNav = () => (
+            <div className="h-14 bg-sidebar text-white flex items-center justify-between px-4 shadow-md z-20 shrink-0">
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center font-bold text-lg">Z</div>
+                        <div>
+                            <div className="font-bold text-sm leading-tight">Zampify AI</div>
+                            <div className="text-[10px] text-slate-400">AI Digital AP Analyst</div>
+                        </div>
+                    </div>
+                    <button className="p-1 hover:bg-slate-800 rounded">
+                        <Icon name="Menu" size={20} className="text-slate-300" />
+                    </button>
+                </div>
+                
+                <div className="flex-1 max-w-2xl px-8">
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Icon name="Search" size={16} className="text-slate-400" />
+                        </span>
+                        <input 
+                            type="text" 
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md py-1.5 pl-10 pr-4 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                            placeholder="Search invoices, vendors, POs..."
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                    <button className="relative p-1 hover:bg-slate-800 rounded">
+                        <Icon name="Bell" size={20} className="text-slate-300" />
+                        <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <button className="p-1 hover:bg-slate-800 rounded">
+                        <Icon name="HelpCircle" size={20} className="text-slate-300" />
+                    </button>
+                    <div className="w-8 h-8 bg-slate-600 rounded-full overflow-hidden border border-slate-500 cursor-pointer">
+                        {/* Placeholder for avatar */}
+                        <img src="https://i.pravatar.cc/150?img=47" alt="User" className="w-full h-full object-cover" />
+                    </div>
+                </div>
+            </div>
+        );
+
+        const Sidebar = () => {
+            const NavItem = ({ icon, label, active = false, badge = null, isChild = false }) => (
+                <div className={`flex items-center justify-between px-4 py-2 cursor-pointer transition-colors ${active ? 'bg-brand text-white border-l-4 border-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white border-l-4 border-transparent'} ${isChild ? 'pl-10' : ''}`}>
+                    <div className="flex items-center space-x-3">
+                        <Icon name={icon} size={18} className={active ? 'text-white' : 'text-slate-400'} />
+                        <span className={`text-sm ${active ? 'font-medium' : ''}`}>{label}</span>
+                    </div>
+                    {badge && (
+                         <span className={`text-xs px-2 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'}`}>{badge}</span>
+                    )}
+                </div>
+            );
+
+            const SectionTitle = ({ title }) => (
+                <div className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-2">
+                    {title}
+                </div>
+            );
+
+            return (
+                <div className="w-64 bg-sidebar text-slate-300 flex flex-col h-full overflow-y-auto shrink-0 border-r border-slate-800">
+                    <SectionTitle title="AP Specialist" />
+                    <NavItem icon="LayoutDashboard" label="Execution Workspace" active={true} />
+                    <NavItem icon="CheckSquare" label="My Reviews" />
+                    <NavItem icon="Archive" label="Search & Archive" />
+
+                    <SectionTitle title="Manager" />
+                    <NavItem icon="PieChart" label="Overview Dashboard" />
+                    <NavItem icon="BarChart3" label="Analytics & KPIs" />
+                    <NavItem icon="Activity" label="Bottleneck Heatmap" />
+                    <NavItem icon="DollarSign" label="Financial Snapshot" />
+
+                    <SectionTitle title="Admin" />
+                    <NavItem icon="Network" label="System Graph" />
+                    <NavItem icon="TerminalSquare" label="Logs & Monitoring" />
+                    <NavItem icon="Shield" label="Policy Center" />
+                    <NavItem icon="Users" label="User Management" />
+                    
+                    <div className="mt-auto p-4">
+                        <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Story Points</div>
+                            <div className="flex justify-center mb-2 relative">
+                                {/* Simple SVG Progress Ring */}
+                                <svg className="w-24 h-24" viewBox="0 0 120 120">
+                                    <circle className="text-slate-700 stroke-current" strokeWidth="8" cx="60" cy="60" r="50" fill="transparent"></circle>
+                                    <circle className="text-emerald-500 progress-ring__circle stroke-current" strokeWidth="8" strokeLinecap="round" cx="60" cy="60" r="50" fill="transparent" strokeDasharray="314" strokeDashoffset="120"></circle>
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                                    <span className="text-2xl font-bold text-white">18</span>
+                                </div>
+                            </div>
+                            <div className="text-xs text-center text-slate-400 mb-3">Total Points Today</div>
+                            <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                <span>Daily Target: 20</span>
+                                <span>90%</span>
+                            </div>
+                            <div className="w-full bg-slate-700 rounded-full h-1.5">
+                                <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '90%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LeftPanelContent = () => {
+            return (
+                <div className="w-64 bg-white border-r border-slate-200 flex flex-col h-full overflow-y-auto shrink-0 hidden md:flex">
+                    <div className="p-4 border-b border-slate-100">
+                        <div className="font-semibold text-sm mb-4">Communication Center</div>
+                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md flex items-center justify-center shadow-sm mb-4 transition-colors">
+                            Compose <Icon name="ChevronDown" size={16} className="ml-2" />
+                        </button>
+                        
+                        <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-2 bg-blue-50 text-blue-700 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="Inbox" size={16} className="mr-3" /> Inbox</div>
+                                <span className="text-xs font-semibold bg-blue-200 px-2 py-0.5 rounded-full">128</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="FileText" size={16} className="mr-3" /> Vendor Invoices</div>
+                                <span className="text-xs text-slate-400">87</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="MessageSquare" size={16} className="mr-3" /> Vendor Queries</div>
+                                <span className="text-xs text-slate-400">15</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-2 text-red-600 hover:bg-red-50 rounded-md cursor-pointer font-medium">
+                                <div className="flex items-center text-sm"><Icon name="AlertTriangle" size={16} className="mr-3" /> Exceptions</div>
+                                <span className="text-xs font-semibold bg-red-100 px-2 py-0.5 rounded-full">14</span>
+                            </div>
+                             <div className="flex items-center justify-between px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="Ban" size={16} className="mr-3" /> Spam</div>
+                                <span className="text-xs text-slate-400">12</span>
+                            </div>
+                             <div className="flex items-center justify-between px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="Send" size={16} className="mr-3" /> Sent</div>
+                                <span className="text-xs text-slate-400">36</span>
+                            </div>
+                             <div className="flex items-center justify-between px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md cursor-pointer">
+                                <div className="flex items-center text-sm"><Icon name="Archive" size={16} className="mr-3" /> Archived</div>
+                                <span className="text-xs text-slate-400">210</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="p-4 flex-1">
+                        <div className="text-xs font-semibold text-slate-500 mb-4 uppercase tracking-wider">Filters</div>
+                        
+                        <div className="space-y-3">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300" defaultChecked />
+                                <span className="text-sm text-slate-700">Assigned to Me</span>
+                            </label>
+                            
+                            <div className="pt-2 space-y-2">
+                                <div className="flex items-center justify-between text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span> Urgent</div>
+                                    <span className="text-xs text-red-500 bg-red-50 px-2 rounded-full">5</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Due Today</div>
+                                    <span className="text-xs text-amber-500 bg-amber-50 px-2 rounded-full">14</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-slate-300 mr-2"></span> Duplicates</div>
+                                    <span className="text-xs text-slate-500">3</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span> Needs Review</div>
+                                    <span className="text-xs text-slate-500">14</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-slate-600 cursor-pointer hover:text-slate-900">
+                                    <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span> Waiting on Vendor</div>
+                                    <span className="text-xs text-amber-500 bg-amber-50 px-2 rounded-full">6</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-6 text-right">
+                            <button className="text-sm text-blue-600 hover:text-blue-800">Clear Filters</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const InvoiceListView = ({ onSelectInvoice, selectedInvoiceId }) => {
+            return (
+                <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-hidden min-w-[500px]">
+                    {/* Welcome Banner */}
+                    <div className="bg-white p-6 border-b border-slate-200 shrink-0">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h1 className="text-xl font-bold text-slate-800 flex items-center">Welcome back, Priya! <span className="ml-2 text-2xl">👋</span></h1>
+                                <p className="text-sm text-slate-600 mt-1">You have 14 exceptions requiring your attention.</p>
+                            </div>
+                            <button className="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-blue-600 bg-white">
+                                <Icon name="ExternalLink" size={18} />
+                            </button>
+                        </div>
+
+                        {/* Pipeline Stepper */}
+                        <div className="mt-8 relative">
+                            {/* Connecting Line */}
+                            <div className="absolute top-5 left-8 right-8 h-0.5 bg-slate-200 z-0"></div>
+                            
+                            <div className="flex justify-between relative z-10">
+                                {pipelineStages.map((stage, idx) => (
+                                    <div key={idx} className="flex flex-col items-center">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 bg-white ${
+                                            stage.active ? 'border-blue-500 text-blue-600 shadow-sm' : 
+                                            idx < 3 ? 'border-green-500 text-green-500' : 'border-slate-200 text-slate-400'
+                                        }`}>
+                                            {idx < 3 ? <Icon name="Check" size={20} /> : <Icon name={stage.icon} size={18} />}
+                                        </div>
+                                        <div className="mt-2 text-center">
+                                            <div className={`text-xs font-semibold ${stage.active ? 'text-slate-800' : 'text-slate-600'}`}>{stage.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-medium">{stage.count}</div>
+                                        </div>
+                                        {/* Little blue arrow for active stage indicator */}
+                                        {idx > 0 && <div className="absolute top-5 -ml-20 text-slate-300 bg-white px-1">
+                                            <Icon name="ChevronRight" size={14} className={idx === 3 ? "text-blue-500" : ""} />
+                                        </div>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table Area */}
+                    <div className="flex-1 flex flex-col p-6 overflow-hidden">
+                        <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
+                            {/* Table Header Controls */}
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                                <h2 className="text-base font-semibold text-slate-800">Processing Pipeline (14)</h2>
+                                <div className="flex items-center space-x-2">
+                                    <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded"><Icon name="RefreshCcw" size={16} /></button>
+                                    <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded"><Icon name="Filter" size={16} /></button>
+                                    <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded"><Icon name="MoreVertical" size={16} /></button>
+                                </div>
+                            </div>
+                            
+                            {/* Sub Filters */}
+                            <div className="px-4 py-3 border-b border-slate-100 flex space-x-2 shrink-0 overflow-x-auto">
+                                <button className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100 flex items-center whitespace-nowrap">
+                                    <Icon name="Lock" size={12} className="mr-1.5" /> All 14
+                                </button>
+                                <button className="px-3 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-full border border-red-100 flex items-center whitespace-nowrap">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5"></span> Needs Review 8
+                                </button>
+                                <button className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-100 flex items-center whitespace-nowrap">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span> Unassigned 3
+                                </button>
+                                <button className="px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-100 flex items-center whitespace-nowrap">
+                                    <Icon name="CheckCircle2" size={12} className="mr-1.5" /> My Resolved 3
+                                </button>
+                            </div>
+
+                            {/* Data Table */}
+                            <div className="flex-1 overflow-auto">
+                                <table className="w-full text-sm text-left whitespace-nowrap">
+                                    <thead className="text-xs text-slate-500 bg-slate-50/50 sticky top-0 border-b border-slate-200 z-10">
+                                        <tr>
+                                            <th className="px-4 py-3 font-medium">Invoice ID</th>
+                                            <th className="px-4 py-3 font-medium">Vendor</th>
+                                            <th className="px-4 py-3 font-medium text-right">Amount</th>
+                                            <th className="px-4 py-3 font-medium">Current Stage</th>
+                                            <th className="px-4 py-3 font-medium">Risk</th>
+                                            <th className="px-4 py-3 font-medium">Priority</th>
+                                            <th className="px-4 py-3 font-medium">Assigned</th>
+                                            <th className="px-4 py-3 font-medium">Age</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {mockInvoices.map((inv) => (
+                                            <tr 
+                                                key={inv.id} 
+                                                onClick={() => onSelectInvoice(inv)}
+                                                className={`hover:bg-blue-50/50 cursor-pointer transition-colors ${selectedInvoiceId === inv.id ? 'bg-blue-50/80 border-l-2 border-blue-500' : 'border-l-2 border-transparent'}`}
+                                            >
+                                                <td className="px-4 py-3 font-medium text-slate-700">{inv.id}</td>
+                                                <td className="px-4 py-3 text-slate-600">{inv.vendor}</td>
+                                                <td className="px-4 py-3 text-right text-slate-700 font-medium">${inv.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                                <td className="px-4 py-3 text-slate-600">{inv.stage}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center text-xs font-medium ${
+                                                        inv.risk === 'High' ? 'text-red-600' : inv.risk === 'Medium' ? 'text-amber-600' : 'text-green-600'
+                                                    }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                                            inv.risk === 'High' ? 'bg-red-500' : inv.risk === 'Medium' ? 'bg-amber-500' : 'bg-green-500'
+                                                        }`}></span>
+                                                        {inv.risk}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center text-xs font-medium ${
+                                                        inv.priority === 'High' ? 'text-red-600' : inv.priority === 'Medium' ? 'text-amber-600' : 'text-slate-600'
+                                                    }`}>
+                                                        {inv.priority === 'High' && <Icon name="ArrowUp" size={12} className="mr-1" />}
+                                                        {inv.priority === 'Medium' && <Icon name="ArrowRight" size={12} className="mr-1 text-amber-500" />}
+                                                        {inv.priority === 'Low' && <Icon name="ArrowDown" size={12} className="mr-1 text-green-500" />}
+                                                        {inv.priority}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600 text-xs">{inv.assigned}</td>
+                                                <td className="px-4 py-3 text-slate-500 text-xs">{inv.age}</td>
+                                                <td className="pr-4 pl-1 text-right text-slate-300"><Icon name="ChevronRight" size={16} /></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {/* Pagination */}
+                            <div className="p-3 border-t border-slate-100 flex items-center justify-center bg-white shrink-0">
+                                <div className="flex space-x-1">
+                                    <button className="px-3 py-1 border border-slate-200 rounded-md text-slate-400 hover:bg-slate-50" disabled><Icon name="ChevronLeft" size={14} /></button>
+                                    <button className="px-3 py-1 border border-blue-500 bg-blue-50 text-blue-600 rounded-md text-sm font-medium">1</button>
+                                    <button className="px-3 py-1 border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50 text-sm">2</button>
+                                    <button className="px-3 py-1 border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50"><Icon name="ChevronRight" size={14} /></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const InvoiceDetailView = ({ invoice }) => {
+            if (!invoice) return <div className="flex-1 bg-white border-l border-slate-200 flex items-center justify-center text-slate-400">Select an invoice to view details</div>;
+
+            return (
+                <div className="flex-1 bg-white border-l border-slate-200 flex flex-col h-full min-w-[700px] overflow-hidden shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-10 relative">
+                    {/* Header */}
+                    <div className="p-5 border-b border-slate-200 shrink-0 bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
+                        <div className="flex items-center space-x-4">
+                            <h2 className="text-xl font-bold text-slate-800">{invoice.id}</h2>
+                            <span className="text-slate-600 font-medium">{invoice.vendor}</span>
+                            <span className="bg-red-50 text-red-600 border border-red-100 text-xs px-2.5 py-0.5 rounded-full flex items-center font-medium">
+                                <Icon name="AlertCircle" size={12} className="mr-1" /> High Risk
+                            </span>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="text-right">
+                                <div className="text-xs text-slate-500">Total</div>
+                                <div className="text-lg font-bold text-slate-800">${invoice.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                            </div>
+                            <div className="flex items-center text-xs text-slate-400">
+                                <Icon name="Clock" size={14} className="mr-1" /> Age: {invoice.age}
+                            </div>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1.5 px-4 rounded-md transition-colors shadow-sm">
+                                Follow
+                            </button>
+                            <button className="text-slate-400 hover:text-slate-600 p-1">
+                                <Icon name="X" size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="px-5 border-b border-slate-200 shrink-0 flex space-x-6 text-sm">
+                        <button className="py-3 border-b-2 border-blue-600 text-blue-600 font-medium">Invoice View</button>
+                        <button className="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800">AI Interpretation</button>
+                        <button className="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800">Timeline</button>
+                        <button className="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800">History</button>
+                    </div>
+
+                    {/* Content Area - Scrollable */}
+                    <div className="flex-1 overflow-y-auto bg-slate-50/50 p-5 flex flex-col gap-5">
+                        
+                        {/* Top Row: Document & Rules */}
+                        <div className="flex gap-5 h-[500px]">
+                            {/* Document Viewer */}
+                            <div className="flex-[3] bg-white rounded-lg border border-slate-200 flex flex-col overflow-hidden shadow-sm">
+                                {/* Toolbar */}
+                                <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                                    <div className="font-semibold text-sm text-slate-700 ml-2">Invoice Document</div>
+                                    <div className="flex items-center space-x-1 text-slate-600">
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Menu" size={16} /></button>
+                                        <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Minus" size={16} /></button>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Plus" size={16} /></button>
+                                        <span className="text-xs px-2">1 / 2</span>
+                                        <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                                        <select className="text-xs bg-transparent border-none focus:ring-0 cursor-pointer">
+                                            <option>100%</option>
+                                        </select>
+                                        <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="RotateCw" size={16} /></button>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Download" size={16} /></button>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Printer" size={16} /></button>
+                                        <button className="p-1.5 hover:bg-slate-200 rounded"><Icon name="Maximize" size={16} /></button>
+                                    </div>
+                                </div>
+                                {/* Document Canvas Placeholder */}
+                                <div className="flex-1 bg-slate-100 overflow-auto relative p-4 flex justify-center items-start">
+                                    {/* Mock Invoice Document Image/HTML */}
+                                    <div className="w-full max-w-lg bg-white shadow-md p-8 relative min-h-[600px]">
+                                        <div className="text-3xl font-bold text-blue-800 mb-6 flex justify-between">
+                                            <span>DELL Technologies</span>
+                                            <span className="text-slate-400 font-normal">INVOICE</span>
+                                        </div>
+                                        
+                                        <div className="flex justify-between mb-8 text-xs">
+                                            <div>
+                                                <strong>Dell Technologies</strong><br/>
+                                                One Dell Way<br/>
+                                                Round Rock, TX 78682<br/>
+                                                USA
+                                            </div>
+                                            <div className="text-right flex flex-col gap-2">
+                                                <div className="flex justify-between w-40 ml-auto"><span className="text-slate-500">Invoice Number</span> <span>INV-1021</span></div>
+                                                <div className="flex justify-between w-40 ml-auto"><span className="text-slate-500">Invoice Date</span> <span>15 May 2025</span></div>
+                                                <div className="flex justify-between w-40 ml-auto"><span className="text-slate-500">Due Date</span> <span>14 Jun 2025</span></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-8 text-xs">
+                                            <div className="text-slate-500 mb-1">Bill To:</div>
+                                            <strong>Zamp Corp</strong><br/>
+                                            45, Brunton Street<br/>
+                                            Bangalore, KA 560025<br/>
+                                            India
+                                        </div>
+
+                                        <table className="w-full text-xs mb-8">
+                                            <thead className="border-b-2 border-slate-800">
+                                                <tr>
+                                                    <th className="text-left py-2">Description</th>
+                                                    <th className="text-right py-2">Qty</th>
+                                                    <th className="text-right py-2">Unit Price</th>
+                                                    <th className="text-right py-2">Amount (USD)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="border-b border-slate-200">
+                                                <tr>
+                                                    <td className="py-2">Dell Latitude 7440 Laptop</td>
+                                                    <td className="text-right py-2">4</td>
+                                                    <td className="text-right py-2">700.00</td>
+                                                    <td className="text-right py-2">2,800.00</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2">Dell Pro Dock WD19S</td>
+                                                    <td className="text-right py-2">2</td>
+                                                    <td className="text-right py-2">200.00</td>
+                                                    <td className="text-right py-2">400.00</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        <div className="w-1/2 ml-auto text-xs">
+                                            <div className="flex justify-between py-1"><span className="font-medium">Subtotal</span> <span>3,200.00</span></div>
+                                            <div className="flex justify-between py-1 border-b border-slate-200"><span className="font-medium">Tax (0%)</span> <span>0.00</span></div>
+                                            <div className="flex justify-between py-2 font-bold text-sm"><span className="">Total</span> <span>3,200.00</span></div>
+                                        </div>
+                                        
+                                        <div className="mt-12 text-xs italic text-slate-500 text-center">Thank you for your business!</div>
+
+                                        {/* Mock OCR/Extraction Highlights overlay */}
+                                        <div className="doc-highlight green" style={{top: '6rem', left: '1.8rem', width: '9rem', height: '3.5rem'}}></div>
+                                        <div className="doc-highlight blue" style={{top: '6.2rem', right: '1.8rem', width: '5rem', height: '1.2rem'}}></div>
+                                        <div className="doc-highlight blue" style={{top: '7.6rem', right: '1.8rem', width: '5.5rem', height: '1.2rem'}}></div>
+                                        <div className="doc-highlight blue" style={{top: '9rem', right: '1.8rem', width: '5rem', height: '1.2rem'}}></div>
+                                        
+                                        <div className="doc-highlight green" style={{top: '12rem', left: '1.8rem', width: '8rem', height: '4rem'}}></div>
+                                        
+                                        <div className="doc-highlight green" style={{bottom: '12rem', right: '1.8rem', width: '13rem', height: '4.5rem'}}></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Validation & Rules */}
+                            <div className="flex-[1.5] flex flex-col gap-5">
+                                <div className="bg-white rounded-lg border border-slate-200 flex flex-col flex-1 shadow-sm overflow-hidden">
+                                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                        <h3 className="font-semibold text-slate-800">Validation & Rules</h3>
+                                    </div>
+                                    <div className="p-4 overflow-y-auto space-y-4">
+                                        
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="CheckCircle2" size={16} className="text-green-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-700">Vendor Verification</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-green-600">Passed</span>
+                                        </div>
+                                        
+                                        <hr className="border-slate-100" />
+                                        
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="CheckCircle2" size={16} className="text-green-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-700">Duplicate Check</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-green-600">Passed</span>
+                                        </div>
+
+                                        <hr className="border-slate-100" />
+
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="CheckCircle2" size={16} className="text-green-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-700">PO Match</div>
+                                                    <div className="text-xs text-slate-500">PO: PO-4455</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-green-600">Passed</span>
+                                        </div>
+
+                                        <hr className="border-slate-100" />
+
+                                        <div className="flex items-start justify-between bg-red-50 p-2 -mx-2 rounded">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="ArrowUpCircle" size={16} className="text-red-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-bold text-red-700">Three-Way Match</div>
+                                                    <div className="text-xs text-red-600">Reason: GRN not found</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-bold text-red-600">Failed</span>
+                                        </div>
+
+                                        <hr className="border-slate-100" />
+
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="CheckCircle2" size={16} className="text-green-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-700">Price Variance</div>
+                                                    <div className="text-xs text-slate-500">Variance: 1.2%</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-green-600">Passed</span>
+                                        </div>
+
+                                        <hr className="border-slate-100" />
+                                        
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="CheckCircle2" size={16} className="text-green-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-700">Tax Validation</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-green-600">Passed</span>
+                                        </div>
+                                        
+                                        <hr className="border-slate-100" />
+
+                                        <div className="flex items-start justify-between bg-amber-50 p-2 -mx-2 rounded border border-amber-100">
+                                            <div className="flex items-center space-x-3">
+                                                <Icon name="ShieldAlert" size={16} className="text-amber-500 mt-0.5" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-amber-800">Approval Policy</div>
+                                                    <div className="text-xs text-amber-700">Amount &gt; $2,500</div>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-semibold text-amber-600">Review Required</span>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bottom Row: Data & Actions */}
+                        <div className="flex gap-5">
+                            
+                            {/* Extracted Data */}
+                            <div className="flex-[3] flex gap-5">
+                                <div className="flex-1 bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                                    <h3 className="font-semibold text-slate-800 mb-4 text-sm">AI Interpretation (Extracted Data)</h3>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                                            <span className="text-slate-500">Vendor</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-slate-800 mr-2">{invoice.vendor}</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">98%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 bg-blue-50/50 p-1 -mx-1 px-1 rounded">
+                                            <span className="text-slate-600 font-medium">Invoice Number</span>
+                                            <div className="flex items-center">
+                                                <span className="font-bold text-blue-700 mr-2">{invoice.id}</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">99%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-2 border-b border-slate-100 bg-blue-50/50 p-1 -mx-1 px-1 rounded">
+                                            <span className="text-slate-600 font-medium">Invoice Date</span>
+                                            <div className="flex items-center">
+                                                <span className="font-bold text-blue-700 mr-2">15 May 2025</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">99%</span>
+                                            </div>
+                                        </div>
+                                         <div className="flex justify-between items-center pb-2 border-b border-slate-100 bg-blue-50/50 p-1 -mx-1 px-1 rounded">
+                                            <span className="text-slate-600 font-medium">Due Date</span>
+                                            <div className="flex items-center">
+                                                <span className="font-bold text-blue-700 mr-2">14 Jun 2025</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">98%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                                            <span className="text-slate-500">Currency</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-slate-800 mr-2">USD</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">100%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center pt-2">
+                                            <span className="text-slate-500">Subtotal</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-slate-800 mr-2">3,200.00</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">98%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Tax</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-slate-800 mr-2">0.00</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded">100%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2 font-bold">
+                                            <span className="text-slate-800">Total</span>
+                                            <div className="flex items-center">
+                                                <span className="text-slate-800 mr-2">3,200.00</span>
+                                                <span className="text-xs text-green-600 bg-green-50 px-1 rounded font-normal">98%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 flex flex-col gap-5">
+                                    <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex-1">
+                                        <h3 className="font-semibold text-slate-800 mb-4 text-sm">Line Items</h3>
+                                        <table className="w-full text-xs text-left mb-2">
+                                            <thead className="text-slate-500 border-b border-slate-200">
+                                                <tr>
+                                                    <th className="py-2 font-medium">Description</th>
+                                                    <th className="py-2 font-medium text-right">Qty</th>
+                                                    <th className="py-2 font-medium text-right">Unit Price</th>
+                                                    <th className="py-2 font-medium text-right">Amount</th>
+                                                    <th className="py-2 font-medium text-center">Conf.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                <tr>
+                                                    <td className="py-2">Dell Latitude 7440 Laptop</td>
+                                                    <td className="py-2 text-right">4</td>
+                                                    <td className="py-2 text-right">700.00</td>
+                                                    <td className="py-2 text-right">2,800.00</td>
+                                                    <td className="py-2 text-center text-green-600 font-medium">98%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2">Dell Pro Dock WD19S</td>
+                                                    <td className="py-2 text-right">2</td>
+                                                    <td className="py-2 text-right">200.00</td>
+                                                    <td className="py-2 text-right">400.00</td>
+                                                    <td className="py-2 text-center text-green-600 font-medium">97%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <button className="text-blue-600 text-xs font-medium flex items-center hover:underline w-full justify-center py-2">
+                                            <Icon name="Plus" size={14} className="mr-1" /> Add Line Item
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex-1">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="font-semibold text-slate-800 text-sm">PO Details (PO-4455)</h3>
+                                            <Icon name="ExternalLink" size={14} className="text-blue-600 cursor-pointer" />
+                                        </div>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-500">PO Date</span>
+                                                <span className="font-medium text-slate-700">01 May 2025</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-500">Vendor</span>
+                                                <span className="font-medium text-slate-700">Dell Technologies</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-500">PO Amount</span>
+                                                <span className="font-medium text-slate-700">3,250.00 USD</span>
+                                            </div>
+                                            <div className="flex justify-between pt-2 border-t border-slate-100">
+                                                <span className="text-slate-500">Received</span>
+                                                <span className="font-bold text-red-600">No (GRN missing)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Action Hub */}
+                            <div className="flex-[1.5] bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex flex-col h-full">
+                                <h3 className="font-semibold text-slate-800 mb-4 text-sm border-b border-slate-100 pb-2">Action Hub</h3>
+                                
+                                <div className="space-y-2 flex-1">
+                                    <button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors opacity-50 cursor-not-allowed" disabled>
+                                        <Icon name="Check" size={18} className="mr-2" /> Approve
+                                    </button>
+                                    <button className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors">
+                                        <Icon name="UserCheck" size={18} className="mr-2" /> Approve with Reason
+                                    </button>
+                                    <button className="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors">
+                                        <Icon name="X" size={18} className="mr-2" /> Reject & Return
+                                    </button>
+                                    <button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors">
+                                        <Icon name="Mail" size={18} className="mr-2" /> Request Info from Vendor
+                                    </button>
+                                    <button className="w-full bg-slate-500 hover:bg-slate-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors">
+                                        <Icon name="CornerUpRight" size={18} className="mr-2" /> Escalate to Manager
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-slate-100">
+                                    <label className="block text-xs text-slate-500 mb-1">Reason (required for actions)</label>
+                                    <select className="w-full border border-slate-300 rounded p-2 text-sm text-slate-700 mb-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                                        <option>Select reason...</option>
+                                        <option>Missing GRN</option>
+                                        <option>Price Variance Approved</option>
+                                    </select>
+                                    <textarea 
+                                        className="w-full border border-slate-300 rounded p-2 text-sm text-slate-700 h-20 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
+                                        placeholder="Add notes..."
+                                    ></textarea>
+                                    <button className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium shadow-sm transition-colors">
+                                        Submit Action
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [selectedInvoice, setSelectedInvoice] = useState(mockInvoices[0]); // Default to first
+
+            // Effect to initialize Lucide icons after render
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            });
+
+            return (
+                <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden font-sans">
+                    <TopNav />
+                    <div className="flex flex-1 overflow-hidden">
+                        <Sidebar />
+                        <LeftPanelContent />
+                        
+                        {/* Main Content Area - Horizontal Split */}
+                        <div className="flex flex-1 overflow-hidden relative">
+                            <InvoiceListView 
+                                onSelectInvoice={(inv) => setSelectedInvoice(inv)} 
+                                selectedInvoiceId={selectedInvoice?.id} 
+                            />
+                            
+                            {/* Slide-over panel for details */}
+                            <div className={`transition-all duration-300 ease-in-out h-full ${selectedInvoice ? 'w-[75%]' : 'w-0 opacity-0'} flex overflow-hidden shadow-2xl z-20`}>
+                                 <InvoiceDetailView invoice={selectedInvoice} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

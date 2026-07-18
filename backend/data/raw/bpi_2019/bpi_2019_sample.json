@@ -1,0 +1,975 @@
+[
+  {
+    "case_id": "PO-1001",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 727.04,
+    "items": [
+      {
+        "description": "Server hardware 1",
+        "quantity": 5,
+        "unit_price": 363.52
+      }
+    ],
+    "timestamp": "2026-07-01T08:53:00Z"
+  },
+  {
+    "case_id": "PO-1001",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5001",
+    "timestamp": "2026-07-05T14:46:00Z"
+  },
+  {
+    "case_id": "PO-1002",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 13367.33,
+    "items": [
+      {
+        "description": "Server hardware 2",
+        "quantity": 1,
+        "unit_price": 6683.66
+      }
+    ],
+    "timestamp": "2026-07-01T08:30:00Z"
+  },
+  {
+    "case_id": "PO-1003",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 14511.55,
+    "items": [
+      {
+        "description": "Server hardware 3",
+        "quantity": 1,
+        "unit_price": 7255.77
+      }
+    ],
+    "timestamp": "2026-07-01T08:24:00Z"
+  },
+  {
+    "case_id": "PO-1003",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5003",
+    "timestamp": "2026-07-05T14:27:00Z"
+  },
+  {
+    "case_id": "PO-1004",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 1664.42,
+    "items": [
+      {
+        "description": "Server hardware 4",
+        "quantity": 5,
+        "unit_price": 832.21
+      }
+    ],
+    "timestamp": "2026-07-01T08:59:00Z"
+  },
+  {
+    "case_id": "PO-1004",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5004",
+    "timestamp": "2026-07-05T14:47:00Z"
+  },
+  {
+    "case_id": "PO-1005",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 9741.6,
+    "items": [
+      {
+        "description": "Server hardware 5",
+        "quantity": 4,
+        "unit_price": 4870.8
+      }
+    ],
+    "timestamp": "2026-07-01T08:14:00Z"
+  },
+  {
+    "case_id": "PO-1005",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5005",
+    "timestamp": "2026-07-05T14:31:00Z"
+  },
+  {
+    "case_id": "PO-1006",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 11996.57,
+    "items": [
+      {
+        "description": "Server hardware 6",
+        "quantity": 4,
+        "unit_price": 5998.28
+      }
+    ],
+    "timestamp": "2026-07-01T08:12:00Z"
+  },
+  {
+    "case_id": "PO-1007",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 3171.54,
+    "items": [
+      {
+        "description": "Server hardware 7",
+        "quantity": 4,
+        "unit_price": 1585.77
+      }
+    ],
+    "timestamp": "2026-07-01T08:59:00Z"
+  },
+  {
+    "case_id": "PO-1007",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5007",
+    "timestamp": "2026-07-05T14:39:00Z"
+  },
+  {
+    "case_id": "PO-1008",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 13973.49,
+    "items": [
+      {
+        "description": "Server hardware 8",
+        "quantity": 2,
+        "unit_price": 6986.74
+      }
+    ],
+    "timestamp": "2026-07-01T08:19:00Z"
+  },
+  {
+    "case_id": "PO-1009",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 1540.35,
+    "items": [
+      {
+        "description": "Server hardware 9",
+        "quantity": 3,
+        "unit_price": 770.17
+      }
+    ],
+    "timestamp": "2026-07-01T08:20:00Z"
+  },
+  {
+    "case_id": "PO-1009",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5009",
+    "timestamp": "2026-07-05T14:25:00Z"
+  },
+  {
+    "case_id": "PO-1010",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 14156.88,
+    "items": [
+      {
+        "description": "Server hardware 10",
+        "quantity": 4,
+        "unit_price": 7078.44
+      }
+    ],
+    "timestamp": "2026-07-01T08:49:00Z"
+  },
+  {
+    "case_id": "PO-1010",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5010",
+    "timestamp": "2026-07-05T14:48:00Z"
+  },
+  {
+    "case_id": "PO-1011",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 14742.97,
+    "items": [
+      {
+        "description": "Server hardware 11",
+        "quantity": 5,
+        "unit_price": 7371.48
+      }
+    ],
+    "timestamp": "2026-07-01T08:18:00Z"
+  },
+  {
+    "case_id": "PO-1011",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5011",
+    "timestamp": "2026-07-05T14:32:00Z"
+  },
+  {
+    "case_id": "PO-1012",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 14012.51,
+    "items": [
+      {
+        "description": "Server hardware 12",
+        "quantity": 3,
+        "unit_price": 7006.26
+      }
+    ],
+    "timestamp": "2026-07-01T08:43:00Z"
+  },
+  {
+    "case_id": "PO-1012",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5012",
+    "timestamp": "2026-07-05T14:57:00Z"
+  },
+  {
+    "case_id": "PO-1013",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 14191.57,
+    "items": [
+      {
+        "description": "Server hardware 13",
+        "quantity": 1,
+        "unit_price": 7095.78
+      }
+    ],
+    "timestamp": "2026-07-01T08:13:00Z"
+  },
+  {
+    "case_id": "PO-1013",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5013",
+    "timestamp": "2026-07-05T14:52:00Z"
+  },
+  {
+    "case_id": "PO-1014",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 5548.62,
+    "items": [
+      {
+        "description": "Server hardware 14",
+        "quantity": 2,
+        "unit_price": 2774.31
+      }
+    ],
+    "timestamp": "2026-07-01T08:49:00Z"
+  },
+  {
+    "case_id": "PO-1014",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5014",
+    "timestamp": "2026-07-05T14:59:00Z"
+  },
+  {
+    "case_id": "PO-1015",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 5029.74,
+    "items": [
+      {
+        "description": "Server hardware 15",
+        "quantity": 3,
+        "unit_price": 2514.87
+      }
+    ],
+    "timestamp": "2026-07-01T08:46:00Z"
+  },
+  {
+    "case_id": "PO-1016",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 3564.07,
+    "items": [
+      {
+        "description": "Server hardware 16",
+        "quantity": 2,
+        "unit_price": 1782.04
+      }
+    ],
+    "timestamp": "2026-07-01T08:10:00Z"
+  },
+  {
+    "case_id": "PO-1016",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5016",
+    "timestamp": "2026-07-05T14:39:00Z"
+  },
+  {
+    "case_id": "PO-1017",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 14050.85,
+    "items": [
+      {
+        "description": "Server hardware 17",
+        "quantity": 4,
+        "unit_price": 7025.43
+      }
+    ],
+    "timestamp": "2026-07-01T08:25:00Z"
+  },
+  {
+    "case_id": "PO-1017",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5017",
+    "timestamp": "2026-07-05T14:12:00Z"
+  },
+  {
+    "case_id": "PO-1018",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 5622.49,
+    "items": [
+      {
+        "description": "Server hardware 18",
+        "quantity": 5,
+        "unit_price": 2811.24
+      }
+    ],
+    "timestamp": "2026-07-01T08:47:00Z"
+  },
+  {
+    "case_id": "PO-1019",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 5676.74,
+    "items": [
+      {
+        "description": "Server hardware 19",
+        "quantity": 3,
+        "unit_price": 2838.37
+      }
+    ],
+    "timestamp": "2026-07-01T08:26:00Z"
+  },
+  {
+    "case_id": "PO-1019",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5019",
+    "timestamp": "2026-07-05T14:39:00Z"
+  },
+  {
+    "case_id": "PO-1020",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 4000.94,
+    "items": [
+      {
+        "description": "Server hardware 20",
+        "quantity": 5,
+        "unit_price": 2000.47
+      }
+    ],
+    "timestamp": "2026-07-01T08:52:00Z"
+  },
+  {
+    "case_id": "PO-1020",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5020",
+    "timestamp": "2026-07-05T14:49:00Z"
+  },
+  {
+    "case_id": "PO-1021",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 11645.29,
+    "items": [
+      {
+        "description": "Server hardware 21",
+        "quantity": 5,
+        "unit_price": 5822.65
+      }
+    ],
+    "timestamp": "2026-07-01T08:40:00Z"
+  },
+  {
+    "case_id": "PO-1021",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5021",
+    "timestamp": "2026-07-05T14:54:00Z"
+  },
+  {
+    "case_id": "PO-1022",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 2474.88,
+    "items": [
+      {
+        "description": "Server hardware 22",
+        "quantity": 4,
+        "unit_price": 1237.44
+      }
+    ],
+    "timestamp": "2026-07-01T08:53:00Z"
+  },
+  {
+    "case_id": "PO-1022",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5022",
+    "timestamp": "2026-07-05T14:51:00Z"
+  },
+  {
+    "case_id": "PO-1023",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 12781.73,
+    "items": [
+      {
+        "description": "Server hardware 23",
+        "quantity": 3,
+        "unit_price": 6390.86
+      }
+    ],
+    "timestamp": "2026-07-01T08:13:00Z"
+  },
+  {
+    "case_id": "PO-1023",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5023",
+    "timestamp": "2026-07-05T14:28:00Z"
+  },
+  {
+    "case_id": "PO-1024",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 8821.64,
+    "items": [
+      {
+        "description": "Server hardware 24",
+        "quantity": 2,
+        "unit_price": 4410.82
+      }
+    ],
+    "timestamp": "2026-07-01T08:14:00Z"
+  },
+  {
+    "case_id": "PO-1024",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5024",
+    "timestamp": "2026-07-05T14:44:00Z"
+  },
+  {
+    "case_id": "PO-1025",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 9471.35,
+    "items": [
+      {
+        "description": "Server hardware 25",
+        "quantity": 5,
+        "unit_price": 4735.68
+      }
+    ],
+    "timestamp": "2026-07-01T08:42:00Z"
+  },
+  {
+    "case_id": "PO-1025",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5025",
+    "timestamp": "2026-07-05T14:40:00Z"
+  },
+  {
+    "case_id": "PO-1026",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 13823.21,
+    "items": [
+      {
+        "description": "Server hardware 26",
+        "quantity": 2,
+        "unit_price": 6911.6
+      }
+    ],
+    "timestamp": "2026-07-01T08:32:00Z"
+  },
+  {
+    "case_id": "PO-1026",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5026",
+    "timestamp": "2026-07-05T14:12:00Z"
+  },
+  {
+    "case_id": "PO-1027",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 13383.2,
+    "items": [
+      {
+        "description": "Server hardware 27",
+        "quantity": 5,
+        "unit_price": 6691.6
+      }
+    ],
+    "timestamp": "2026-07-01T08:44:00Z"
+  },
+  {
+    "case_id": "PO-1027",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5027",
+    "timestamp": "2026-07-05T14:35:00Z"
+  },
+  {
+    "case_id": "PO-1028",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 4846.11,
+    "items": [
+      {
+        "description": "Server hardware 28",
+        "quantity": 2,
+        "unit_price": 2423.05
+      }
+    ],
+    "timestamp": "2026-07-01T08:28:00Z"
+  },
+  {
+    "case_id": "PO-1029",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 3742.04,
+    "items": [
+      {
+        "description": "Server hardware 29",
+        "quantity": 3,
+        "unit_price": 1871.02
+      }
+    ],
+    "timestamp": "2026-07-01T08:24:00Z"
+  },
+  {
+    "case_id": "PO-1029",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5029",
+    "timestamp": "2026-07-05T14:42:00Z"
+  },
+  {
+    "case_id": "PO-1030",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 8689.07,
+    "items": [
+      {
+        "description": "Server hardware 30",
+        "quantity": 3,
+        "unit_price": 4344.53
+      }
+    ],
+    "timestamp": "2026-07-01T08:51:00Z"
+  },
+  {
+    "case_id": "PO-1030",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5030",
+    "timestamp": "2026-07-05T14:17:00Z"
+  },
+  {
+    "case_id": "PO-1031",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 2865.67,
+    "items": [
+      {
+        "description": "Server hardware 31",
+        "quantity": 1,
+        "unit_price": 1432.84
+      }
+    ],
+    "timestamp": "2026-07-01T08:30:00Z"
+  },
+  {
+    "case_id": "PO-1031",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5031",
+    "timestamp": "2026-07-05T14:52:00Z"
+  },
+  {
+    "case_id": "PO-1032",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 12064.92,
+    "items": [
+      {
+        "description": "Server hardware 32",
+        "quantity": 2,
+        "unit_price": 6032.46
+      }
+    ],
+    "timestamp": "2026-07-01T08:18:00Z"
+  },
+  {
+    "case_id": "PO-1033",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 9458.44,
+    "items": [
+      {
+        "description": "Server hardware 33",
+        "quantity": 3,
+        "unit_price": 4729.22
+      }
+    ],
+    "timestamp": "2026-07-01T08:36:00Z"
+  },
+  {
+    "case_id": "PO-1033",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5033",
+    "timestamp": "2026-07-05T14:27:00Z"
+  },
+  {
+    "case_id": "PO-1034",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 12100.54,
+    "items": [
+      {
+        "description": "Server hardware 34",
+        "quantity": 5,
+        "unit_price": 6050.27
+      }
+    ],
+    "timestamp": "2026-07-01T08:55:00Z"
+  },
+  {
+    "case_id": "PO-1034",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5034",
+    "timestamp": "2026-07-05T14:26:00Z"
+  },
+  {
+    "case_id": "PO-1035",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 13407.26,
+    "items": [
+      {
+        "description": "Server hardware 35",
+        "quantity": 1,
+        "unit_price": 6703.63
+      }
+    ],
+    "timestamp": "2026-07-01T08:55:00Z"
+  },
+  {
+    "case_id": "PO-1035",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5035",
+    "timestamp": "2026-07-05T14:59:00Z"
+  },
+  {
+    "case_id": "PO-1036",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 3498.58,
+    "items": [
+      {
+        "description": "Server hardware 36",
+        "quantity": 5,
+        "unit_price": 1749.29
+      }
+    ],
+    "timestamp": "2026-07-01T08:33:00Z"
+  },
+  {
+    "case_id": "PO-1037",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 2189.42,
+    "items": [
+      {
+        "description": "Server hardware 37",
+        "quantity": 3,
+        "unit_price": 1094.71
+      }
+    ],
+    "timestamp": "2026-07-01T08:23:00Z"
+  },
+  {
+    "case_id": "PO-1037",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5037",
+    "timestamp": "2026-07-05T14:24:00Z"
+  },
+  {
+    "case_id": "PO-1038",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 5186.73,
+    "items": [
+      {
+        "description": "Server hardware 38",
+        "quantity": 3,
+        "unit_price": 2593.36
+      }
+    ],
+    "timestamp": "2026-07-01T08:23:00Z"
+  },
+  {
+    "case_id": "PO-1038",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5038",
+    "timestamp": "2026-07-05T14:29:00Z"
+  },
+  {
+    "case_id": "PO-1039",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 5565.4,
+    "items": [
+      {
+        "description": "Server hardware 39",
+        "quantity": 3,
+        "unit_price": 2782.7
+      }
+    ],
+    "timestamp": "2026-07-01T08:49:00Z"
+  },
+  {
+    "case_id": "PO-1039",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5039",
+    "timestamp": "2026-07-05T14:57:00Z"
+  },
+  {
+    "case_id": "PO-1040",
+    "event": "Create Purchase Order Item",
+    "vendor": "Amazon Web Services",
+    "total_amount": 540.45,
+    "items": [
+      {
+        "description": "Server hardware 40",
+        "quantity": 3,
+        "unit_price": 270.23
+      }
+    ],
+    "timestamp": "2026-07-01T08:17:00Z"
+  },
+  {
+    "case_id": "PO-1040",
+    "event": "Record Goods Receipt",
+    "vendor": "Amazon Web Services",
+    "grn_number": "GRN-5040",
+    "timestamp": "2026-07-05T14:53:00Z"
+  },
+  {
+    "case_id": "PO-1041",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 5220.66,
+    "items": [
+      {
+        "description": "Server hardware 41",
+        "quantity": 2,
+        "unit_price": 2610.33
+      }
+    ],
+    "timestamp": "2026-07-01T08:35:00Z"
+  },
+  {
+    "case_id": "PO-1041",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5041",
+    "timestamp": "2026-07-05T14:10:00Z"
+  },
+  {
+    "case_id": "PO-1042",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 10181.78,
+    "items": [
+      {
+        "description": "Server hardware 42",
+        "quantity": 3,
+        "unit_price": 5090.89
+      }
+    ],
+    "timestamp": "2026-07-01T08:43:00Z"
+  },
+  {
+    "case_id": "PO-1042",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5042",
+    "timestamp": "2026-07-05T14:40:00Z"
+  },
+  {
+    "case_id": "PO-1043",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 3038.24,
+    "items": [
+      {
+        "description": "Server hardware 43",
+        "quantity": 4,
+        "unit_price": 1519.12
+      }
+    ],
+    "timestamp": "2026-07-01T08:13:00Z"
+  },
+  {
+    "case_id": "PO-1044",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 12491.53,
+    "items": [
+      {
+        "description": "Server hardware 44",
+        "quantity": 3,
+        "unit_price": 6245.77
+      }
+    ],
+    "timestamp": "2026-07-01T08:14:00Z"
+  },
+  {
+    "case_id": "PO-1045",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 12537.62,
+    "items": [
+      {
+        "description": "Server hardware 45",
+        "quantity": 4,
+        "unit_price": 6268.81
+      }
+    ],
+    "timestamp": "2026-07-01T08:17:00Z"
+  },
+  {
+    "case_id": "PO-1046",
+    "event": "Create Purchase Order Item",
+    "vendor": "Cisco Systems",
+    "total_amount": 10413.62,
+    "items": [
+      {
+        "description": "Server hardware 46",
+        "quantity": 2,
+        "unit_price": 5206.81
+      }
+    ],
+    "timestamp": "2026-07-01T08:58:00Z"
+  },
+  {
+    "case_id": "PO-1046",
+    "event": "Record Goods Receipt",
+    "vendor": "Cisco Systems",
+    "grn_number": "GRN-5046",
+    "timestamp": "2026-07-05T14:44:00Z"
+  },
+  {
+    "case_id": "PO-1047",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 9714.42,
+    "items": [
+      {
+        "description": "Server hardware 47",
+        "quantity": 4,
+        "unit_price": 4857.21
+      }
+    ],
+    "timestamp": "2026-07-01T08:43:00Z"
+  },
+  {
+    "case_id": "PO-1047",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5047",
+    "timestamp": "2026-07-05T14:48:00Z"
+  },
+  {
+    "case_id": "PO-1048",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 2976.27,
+    "items": [
+      {
+        "description": "Server hardware 48",
+        "quantity": 3,
+        "unit_price": 1488.13
+      }
+    ],
+    "timestamp": "2026-07-01T08:29:00Z"
+  },
+  {
+    "case_id": "PO-1048",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5048",
+    "timestamp": "2026-07-05T14:21:00Z"
+  },
+  {
+    "case_id": "PO-1049",
+    "event": "Create Purchase Order Item",
+    "vendor": "Oracle Corporation",
+    "total_amount": 8683.4,
+    "items": [
+      {
+        "description": "Server hardware 49",
+        "quantity": 2,
+        "unit_price": 4341.7
+      }
+    ],
+    "timestamp": "2026-07-01T08:20:00Z"
+  },
+  {
+    "case_id": "PO-1049",
+    "event": "Record Goods Receipt",
+    "vendor": "Oracle Corporation",
+    "grn_number": "GRN-5049",
+    "timestamp": "2026-07-05T14:12:00Z"
+  },
+  {
+    "case_id": "PO-1050",
+    "event": "Create Purchase Order Item",
+    "vendor": "Dell Technologies",
+    "total_amount": 556.18,
+    "items": [
+      {
+        "description": "Server hardware 50",
+        "quantity": 3,
+        "unit_price": 278.09
+      }
+    ],
+    "timestamp": "2026-07-01T08:44:00Z"
+  },
+  {
+    "case_id": "PO-1050",
+    "event": "Record Goods Receipt",
+    "vendor": "Dell Technologies",
+    "grn_number": "GRN-5050",
+    "timestamp": "2026-07-05T14:35:00Z"
+  }
+]
