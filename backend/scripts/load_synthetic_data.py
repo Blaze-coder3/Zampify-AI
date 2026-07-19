@@ -8,7 +8,7 @@ from app.models import User, Vendor, Product, PurchaseOrder, POLineItem, GoodsRe
 DATASET_DIR = r"C:\Users\A Syed Khwaja\Downloads\Zampify_Dataset"
 
 async def create_default_user(db):
-    user_email = "sarah@zampify.ai"
+    user_email = "priya@zampify.ai"
     result = await db.execute(select(User).filter(User.email == user_email))
     user = result.scalars().first()
     if not user:

@@ -103,7 +103,7 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                               {v.rule_id}
                             </div>
                             <div className={cn("text-xs mt-0.5", v.status === 'fail' ? 'text-red-600' : 'text-slate-500')}>
-                              {v.details || (v.status === 'pass' ? 'Check passed' : 'Issue detected')}
+                              {v.reason || (v.status === 'pass' ? 'Check passed' : 'Issue detected')}
                             </div>
                           </div>
                         </div>

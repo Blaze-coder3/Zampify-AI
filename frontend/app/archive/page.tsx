@@ -9,7 +9,6 @@ import ArchiveHeader from "@/components/archive/ArchiveHeader";
 import ArchiveStatCards from "@/components/archive/ArchiveStatCards";
 import ArchiveSearchTabs from "@/components/archive/ArchiveSearchTabs";
 import ArchiveTable from "@/components/archive/ArchiveTable";
-import ArchiveRightSidebar from "@/components/archive/ArchiveRightSidebar";
 import InvoiceDetailView from "@/components/InvoiceDetailView";
 
 export default function SearchAndArchivePage() {
@@ -61,7 +60,8 @@ export default function SearchAndArchivePage() {
         total_spend,
         vendors_count: vendors
       },
-      status_distribution
+      status_distribution,
+      recent_searches: []
     };
   }, [invoices]);
 
@@ -126,23 +126,15 @@ export default function SearchAndArchivePage() {
                 onDateFilterChange={setDateFilter}
               />
               
-              <div className="flex flex-col xl:flex-row gap-6 mt-4">
-                {/* Main Left Content: The Table */}
-                <div className="flex-1 min-w-0 pb-6">
-                  <ArchiveTable 
-                    invoices={invoices} 
-                    searchQuery={searchQuery} 
-                    onSearchChange={setSearchQuery} 
-                    activeTab={activeTab}
-                    dateFilter={dateFilter}
-                    onSelectInvoice={handleSelectInvoice} 
-                  />
-                </div>
-                
-                {/* Right Sidebar: Filters and Analytics */}
-                <div className="w-full xl:w-[320px] shrink-0 pb-6">
-                  <ArchiveRightSidebar summary={archiveSummary} />
-                </div>
+              <div className="mt-4 pb-6">
+                <ArchiveTable 
+                  invoices={invoices} 
+                  searchQuery={searchQuery} 
+                  onSearchChange={setSearchQuery} 
+                  activeTab={activeTab}
+                  dateFilter={dateFilter}
+                  onSelectInvoice={handleSelectInvoice} 
+                />
               </div>
             </div>
           </div>

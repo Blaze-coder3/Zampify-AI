@@ -16,9 +16,7 @@ from app.models import User, Vendor, PurchaseOrder
 
 
 USERS = [
-    {"email": "sarah@zampify.ai", "name": "Sarah Chen", "role": "ap_clerk", "password": "demo123"},
-    {"email": "david@zampify.ai", "name": "David Kumar", "role": "ap_manager", "password": "demo123"},
-    {"email": "admin@zampify.ai", "name": "Admin User", "role": "admin", "password": "demo123"},
+    {"email": "priya@zampify.ai", "name": "Priya Sharma", "role": "ap_clerk", "password": "demo123"}
 ]
 
 VENDORS = [
@@ -163,10 +161,8 @@ async def seed():
         print(f"  [OK] {len(PURCHASE_ORDERS)} purchase orders seeded")
 
     print("\nDatabase seed complete!")
-    print("Demo credentials:")
-    print("  AP Clerk:   sarah@zampify.ai / demo123")
-    print("  AP Manager: david@zampify.ai / demo123")
-    print("  Admin:      admin@zampify.ai / demo123")
+    print("Demo Credentials:")
+    print("  AP Clerk:   priya@zampify.ai / demo123")
 
 
 if __name__ == "__main__":

@@ -69,7 +69,7 @@ export default function Dashboard() {
       // Compute stats locally instead of broken API calls
       setStats({
         needs_review: invs.filter(i => i.status === 'needs_review' || i.decision === 'investigating').length,
-        waiting_on_vendor: casesRes.data.filter(c => c.status === 'Pending Vendor').length + invs.filter(i => i.status === 'triage').length,
+        waiting_on_vendor: casesRes.data.filter(c => c.status === 'WaitingVendor').length + invs.filter(i => i.status === 'pending_vendor').length,
         due_within_2h: invs.filter(i => i.priority === 'High' && (i.status === 'needs_review' || i.decision === 'investigating')).length,
         duplicates_detected: duplicates,
         ready_to_approve: readyToApprove,

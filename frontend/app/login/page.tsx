@@ -56,7 +56,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="sarah@zampify.ai"
+                placeholder="priya@zampify.ai"
                 required
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 transition-colors"
               />
@@ -92,8 +92,7 @@ export default function LoginPage() {
           <div className="mt-5 p-3 bg-white/3 rounded-lg border border-white/5">
             <p className="text-xs text-slate-500 mb-2 font-medium">Demo credentials:</p>
             <div className="space-y-1 text-xs text-slate-600 font-mono">
-              <div>sarah@zampify.ai / demo123 <span className="text-slate-700">(AP Clerk)</span></div>
-              <div>david@zampify.ai / demo123 <span className="text-slate-700">(Manager)</span></div>
+              <div>priya@zampify.ai / demo123 <span className="text-slate-700">(AP Specialist)</span></div>
             </div>
           </div>
         </div>

@@ -21,7 +21,7 @@ API_LOGIN_URL = "http://localhost:8000/api/v1/auth/login"
 async def get_auth_token():
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(API_LOGIN_URL, json={"email": "sarah@zampify.ai", "password": "admin123"})
+            resp = await client.post(API_LOGIN_URL, json={"email": "priya@zampify.ai", "password": "demo123"})
             if resp.status_code == 200:
                 return resp.json()["data"]["access_token"]
             logger.error(f"Failed to authenticate script: {resp.text}")

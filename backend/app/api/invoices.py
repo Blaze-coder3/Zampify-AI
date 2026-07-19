@@ -75,8 +75,7 @@ async def intake_document(
     file_hash = hashlib.sha256(content).hexdigest()
     # Ensure Invoice model supports file_hash, check if duplicate exists
     existing_invoice = (await db.execute(select(Invoice).where(Invoice.file_hash == file_hash))).scalar_one_or_none()
-    if existing_invoice:
-        raise HTTPException(status_code=400, detail={"error": "Duplicate File", "message": f"This exact file was already uploaded as invoice #{existing_invoice.id[:8].upper()}."})
+    is_exact_duplicate = existing_invoice is not None
 
     # 6. PyMuPDF Inspections (Password, JS, Pages)
     try:
@@ -112,12 +111,26 @@ async def intake_document(
         tracking_id = "TRK-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
         # Create invoice record
+        status = "received"
+        decision = None
+        decision_explanation = None
+        triggered_rules = []
+
+        if is_exact_duplicate:
+            status = "failed"
+            decision = "rejected"
+            decision_explanation = f"Exact duplicate file of {existing_invoice.id[:8].upper()}."
+            triggered_rules = [{"rule_id": "BR-004", "status": "fail", "details": "Exact duplicate file"}]
+
         invoice = Invoice(
             id=invoice_id,
             tracking_id=tracking_id,
             pdf_storage_path=file_path,
             source="portal",
-            status="received",
+            status=status,
+            decision=decision,
+            decision_explanation=decision_explanation,
+            triggered_rules=triggered_rules,
             received_at=datetime.now(timezone.utc),
             file_hash=file_hash
         )
@@ -129,18 +142,19 @@ async def intake_document(
             invoice_id=invoice_id,
             user_id=current_user.id,
             action="CREATE",
-            reason=f"Status: received, Filename: {file.filename}" + (f" (Warning: {file_size_mb:.1f}MB)" if is_warning_size else ""),
+            reason=f"Status: {status}, Filename: {file.filename}" + (f" (Warning: {file_size_mb:.1f}MB)" if is_warning_size else ""),
         )
         db.add(audit)
         await db.commit()
 
-        # Enqueue processing job
-        try:
-            pool = await get_redis_pool()
-            await pool.enqueue_job("process_invoice", invoice_id=invoice_id)
-            await pool.close()
-        except Exception as e:
-            logger.error("failed_to_enqueue", invoice_id=invoice_id, error=str(e))
+        if not is_exact_duplicate:
+            # Enqueue processing job
+            try:
+                pool = await get_redis_pool()
+                await pool.enqueue_job("process_invoice", invoice_id=invoice_id)
+                await pool.close()
+            except Exception as e:
+                logger.error("failed_to_enqueue", invoice_id=invoice_id, error=str(e))
 
         logger.info("invoice_uploaded", invoice_id=invoice_id, filename=file.filename)
     except Exception as exc:
@@ -357,8 +371,8 @@ async def get_communication_cases(
             case_status = "Open"
             
         cases.append({
-            "id": f"CASE-{inv.id[:8]}",
-            "threadId": f"THR-{inv.id[:8]}",
+            "id": f"CASE-{inv.id}",
+            "threadId": f"THR-{inv.id}",
             "folder": folder,
             "intent": "Invoice",
             "vendor": vendor_info,

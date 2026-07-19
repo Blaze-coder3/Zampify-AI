@@ -15,12 +15,16 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-red-50 text-red-600 border-red-200">Locked</span>;
 }
 
-function Avatar({ initials }: { initials: string }) {
+function Avatar({ initials, imageUrl }: { initials: string, imageUrl?: string }) {
   const colors = ["bg-blue-500", "bg-purple-500", "bg-emerald-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500"];
   const color = colors[initials.charCodeAt(0) % colors.length];
   return (
-    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0", color)}>
-      {initials}
+    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden", color)}>
+      {imageUrl ? (
+        <img src={imageUrl} alt={initials} className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   );
 }
@@ -48,7 +52,10 @@ export default function UserList({ data }: { data: any[] | undefined }) {
                   <td className="py-3 px-2"><input type="checkbox" className="rounded border-slate-300" /></td>
                   <td className="py-3 px-2">
                     <div className="flex items-center gap-3">
-                      <Avatar initials={initials} />
+                      <Avatar 
+                        initials={initials} 
+                        imageUrl={user.email === "priya@zampify.ai" ? "/priya.png" : undefined} 
+                      />
                       <div>
                         <div className="text-xs font-bold text-slate-800">{user.name}</div>
                         <div className="text-[10px] text-slate-500">{user.email}</div>

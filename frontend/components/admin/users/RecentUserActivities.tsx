@@ -16,8 +16,12 @@ export default function RecentUserActivities({ data }: { data: any[] | undefined
           const avatarColor = AVATAR_COLORS[i % AVATAR_COLORS.length];
           return (
             <div key={i} className="flex gap-3 border-b border-slate-50 pb-3 last:border-0 last:pb-0">
-              <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0", avatarColor)}>
-                {initials}
+              <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden", avatarColor)}>
+                {item.user.includes("Priya") ? (
+                  <img src="/priya.png" alt="Priya" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex flex-wrap items-baseline gap-1">

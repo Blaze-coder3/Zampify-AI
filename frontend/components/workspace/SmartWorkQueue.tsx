@@ -234,7 +234,9 @@ export default function SmartWorkQueue({
           <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             ({totalItems})
           </span>
-          <HelpCircle className="w-4 h-4 text-gray-400 ml-1 cursor-help" title="This smart queue prioritizes urgent items and detects duplicates automatically." />
+          <span title="This smart queue prioritizes urgent items and detects duplicates automatically.">
+            <HelpCircle className="w-4 h-4 text-gray-400 ml-1 cursor-help" />
+          </span>
         </div>
         
         <div className="flex items-center gap-3">
