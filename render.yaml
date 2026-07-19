@@ -38,3 +38,4 @@ services:
     name: zampify-redis
     plan: free
     maxmemoryPolicy: noeviction
+    ipAllowList: []
