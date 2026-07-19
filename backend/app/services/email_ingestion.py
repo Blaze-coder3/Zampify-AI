@@ -15,13 +15,13 @@ from app.services.email_classifier import classify_email, generate_vendor_reply
 logger = get_logger(__name__)
 
 # Wait slightly for the backend server to boot up
-API_UPLOAD_URL = "http://localhost:8000/api/v1/invoices/upload"
+API_UPLOAD_URL = "http://localhost:8000/api/v1/invoices/intake/document"
 API_LOGIN_URL = "http://localhost:8000/api/v1/auth/login"
 
 async def get_auth_token():
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(API_LOGIN_URL, json={"email": "sarah@zampify.ai", "password": "demo123"})
+            resp = await client.post(API_LOGIN_URL, json={"email": "sarah@zampify.ai", "password": "admin123"})
             if resp.status_code == 200:
                 return resp.json()["data"]["access_token"]
             logger.error(f"Failed to authenticate script: {resp.text}")

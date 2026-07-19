@@ -5,6 +5,8 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+import os
+
 client = AsyncOpenAI(
     api_key=settings.FEATHERLESS_API_KEY,
     base_url=settings.FEATHERLESS_BASE_URL,

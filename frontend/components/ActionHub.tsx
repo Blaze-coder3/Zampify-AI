@@ -1,29 +1,62 @@
 import { useState } from "react";
-import { Check, UserCheck, X, Mail, CornerUpRight } from "lucide-react";
-import { overrideDecision } from "@/lib/api";
+import { Check, UserCheck, X, Mail, CornerUpRight, RotateCcw } from "lucide-react";
+import { overrideDecision, InvoiceDetail } from "@/lib/api";
 
 interface ActionHubProps {
-  invoiceId: string;
+  invoice: InvoiceDetail;
   onActionComplete: () => void;
 }
 
-export default function ActionHub({ invoiceId, onActionComplete }: ActionHubProps) {
+export default function ActionHub({ invoice, onActionComplete }: ActionHubProps) {
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [isRevising, setIsRevising] = useState(false);
 
-  const handleAction = async (status: "approved" | "rejected" | "investigating") => {
+  const handleAction = async (status: "approved" | "rejected" | "investigating" | "escalated") => {
     setLoading(true);
     try {
-      await overrideDecision(invoiceId, status, `${reason} - ${notes}`);
+      await overrideDecision(invoice.id, status, `${reason} - ${notes}`);
       onActionComplete();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to submit action.");
+      alert(`Failed to submit action: ${e.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
+
+  const hasDecision = invoice.decision && invoice.decision !== "";
+
+  if (hasDecision && !isRevising) {
+    return (
+      <div className="flex-[1.5] bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col h-full items-center justify-center text-center">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+          {invoice.decision === "approved" ? <Check size={32} className="text-emerald-500" /> :
+           invoice.decision === "rejected" ? <X size={32} className="text-red-500" /> :
+           <Check size={32} className="text-blue-500" />}
+        </div>
+        <h3 className="font-bold text-lg text-slate-800 mb-2 capitalize">{invoice.decision}</h3>
+        {invoice.decision_explanation && (
+          <p className="text-sm text-slate-500 mb-6 max-w-[200px]">{invoice.decision_explanation}</p>
+        )}
+        <div className="mt-6 flex flex-col gap-3 w-full max-w-[200px]">
+          <button 
+            onClick={() => setIsRevising(true)}
+            className="w-full text-sm font-medium text-blue-600 hover:bg-blue-50 py-2 rounded-lg border border-transparent hover:border-blue-100 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <RotateCcw size={14} /> Revise Decision
+          </button>
+          <button 
+            onClick={() => onActionComplete()}
+            className="w-full text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg transition-colors"
+          >
+            Close Panel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-[1.5] bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex flex-col h-full">
@@ -59,7 +92,7 @@ export default function ActionHub({ invoiceId, onActionComplete }: ActionHubProp
           <Mail size={18} className="mr-2" /> Request Info from Vendor
         </button>
         <button 
-          onClick={() => handleAction("investigating")}
+          onClick={() => handleAction("escalated")}
           disabled={loading}
           className="w-full bg-slate-500 hover:bg-slate-600 text-white py-2 px-4 rounded flex items-center justify-center font-medium shadow-sm transition-colors disabled:opacity-50"
         >

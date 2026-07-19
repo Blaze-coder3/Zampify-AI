@@ -6,19 +6,69 @@ from app.models.user import User
 
 router = APIRouter()
 
+from sqlalchemy import select, func
+from datetime import datetime, date, timezone
+from app.models.invoice import Invoice
+from app.models.vendor import Vendor
+
 @router.get("/summary")
 async def get_analytics_summary(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    today = date.today()
+    
+    # 1. Status Distribution & Aging
     status_counts = {"needs_review": 0, "due_today": 0, "overdue": 0, "escalated": 0, "completed": 0, "classifying": 0, "extracting": 0, "failed": 0}
+    
+    result = await db.execute(select(Invoice.status, Invoice.due_date))
+    invoices = result.all()
+    
+    for status, due_date in invoices:
+        if status in status_counts:
+            status_counts[status] += 1
+        elif status == "approved":
+            status_counts["completed"] += 1
+            
+        if due_date:
+            if due_date == today:
+                status_counts["due_today"] += 1
+            elif due_date < today and status not in ("approved", "archived", "rejected"):
+                status_counts["overdue"] += 1
+
+    # 2. Risk Distribution (Heuristic)
     risk_distribution = {"high": 0, "medium": 0, "low": 0}
+    
+    result = await db.execute(select(Invoice.status, Invoice.overall_confidence, Invoice.grand_total))
+    for status, conf, total in result.all():
+        if status == "escalated" or status == "failed" or (conf and conf < 0.70) or (total and total > 50000):
+            risk_distribution["high"] += 1
+        elif status == "needs_review":
+            risk_distribution["medium"] += 1
+        else:
+            risk_distribution["low"] += 1
+
+    # 3. Top Vendors
+    top_vendors = []
+    vendor_res = await db.execute(
+        select(Vendor.name, func.count(Invoice.id).label('count'), func.sum(Invoice.grand_total).label('total'))
+        .join(Invoice, Invoice.vendor_id == Vendor.id)
+        .where(Invoice.status.notin_(["approved", "rejected", "archived"]))
+        .group_by(Vendor.name)
+        .order_by(func.count(Invoice.id).desc())
+        .limit(5)
+    )
+    for v_name, count, total in vendor_res.all():
+        top_vendors.append({"vendor_name": v_name, "count": count, "total_amount": float(total or 0)})
+
+    # 4. SLA Compliance & Avg Review Time (mock for now, can be computed from created_at/decided_at if needed)
+    sla_compliance = []
     
     return {
         "status_distribution": status_counts,
         "risk_distribution": risk_distribution,
-        "top_vendors": [],
-        "sla_compliance": []
+        "top_vendors": top_vendors,
+        "sla_compliance": sla_compliance
     }
 
 @router.get("/archive-summary")

@@ -8,17 +8,17 @@ interface AICopilotProps {
   stats?: DashboardStats | null;
   cases?: CommunicationCase[];
   invoices?: InvoiceSummary[];
+  onSelectInvoice?: (id: string) => void;
 }
 
-export default function AICopilot({ stats, cases = [], invoices = [] }: AICopilotProps) {
+export default function AICopilot({ stats, cases = [], invoices = [], onSelectInvoice }: AICopilotProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Compute dynamic summary
   const needsReviewCount = stats?.needs_review || 0;
-  const waitingVendorCount = cases.filter(c => c.status === "WaitingVendor").length;
-  // Compute SLAs at risk (mock logic: invoices in processing)
-  const slaAtRiskCount = invoices.filter(i => ['received', 'classifying', 'extracting', 'validating'].includes(i.status)).length;
+  const waitingVendorCount = stats?.waiting_on_vendor || 0;
+  const slaAtRiskCount = stats?.due_within_2h || 0;
 
 
   useEffect(() => {
@@ -73,14 +73,14 @@ export default function AICopilot({ stats, cases = [], invoices = [] }: AICopilo
                   </div>
                 </div>
                 <div className="flex gap-2 mb-3">
-                  <div className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors bg-rose-50 text-rose-700 border border-rose-200 py-0 text-[10px]">High SLA Risk</div>
+                  <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${invoices[0].priority === 'High' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'} border py-0 text-[10px]`}>{invoices[0].priority || 'Medium'} Priority</div>
                 </div>
                 <div className="text-xs text-gray-600 mb-3 flex justify-between items-center">
-                  SLA Remaining: <span className="font-bold text-red-600">2h 15m</span>
+                  SLA Remaining: <span className="font-bold text-red-600">{invoices[0].sla_remaining || '24h 0m'}</span>
                 </div>
                 <button 
                   className="w-full h-8 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
-                  onClick={() => alert("Opening next case...")}
+                  onClick={() => onSelectInvoice && onSelectInvoice(invoices[0].id)}
                 >
                   Open Next Case
                 </button>

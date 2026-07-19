@@ -29,23 +29,41 @@ function StatusPill({ status }: { status: string }) {
   return <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 rounded-full whitespace-nowrap capitalize">{status?.replace("_", " ")}</span>;
 }
 
-export default function ArchiveTable({ invoices }: { invoices: InvoiceSummary[] }) {
-  // Mapping to mock data if the list is empty, otherwise use real data
-  const rows = invoices.length > 0 
-    ? invoices.slice(0, 10).map((inv, i) => {
-        return {
-          id: inv.invoice_number || `INV-10${21 - i}`,
-          vendor: "Mock Vendor",
-          date: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          amount: inv.grand_total ? `$${inv.grand_total.toLocaleString(undefined, {minimumFractionDigits: 2})}` : "$0.00",
-          type: "Invoice",
-          status: inv.status,
-          poNumber: `PO-44${55 - i}`,
-          dueDate: "14 Jun 2025",
-          archivedOn: "15 May 2025"
-        };
-      })
-    : [];
+export default function ArchiveTable({ 
+  invoices,
+  searchQuery,
+  onSearchChange,
+  onSelectInvoice
+}: { 
+  invoices: InvoiceSummary[],
+  searchQuery?: string,
+  onSearchChange?: (q: string) => void,
+  onSelectInvoice?: (inv: InvoiceSummary) => void
+}) {
+  let filteredInvoices = invoices;
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filteredInvoices = filteredInvoices.filter(i => 
+      (i.vendor_name || '').toLowerCase().includes(q) || 
+      (i.invoice_number || '').toLowerCase().includes(q) ||
+      i.id.toLowerCase().includes(q)
+    );
+  }
+
+  const rows = filteredInvoices.map((inv) => {
+    return {
+      original: inv,
+      id: inv.invoice_number || inv.id.substring(0, 8),
+      vendor: inv.vendor_name || "Unknown",
+      date: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      amount: inv.grand_total ? `$${inv.grand_total.toLocaleString(undefined, {minimumFractionDigits: 2})}` : "$0.00",
+      type: "Invoice",
+      status: inv.status,
+      poNumber: "-", // Would map to PO if available in summary
+      dueDate: "-",  // Would map to due date if available in summary
+      archivedOn: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    };
+  });
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
@@ -70,11 +88,15 @@ export default function ArchiveTable({ invoices }: { invoices: InvoiceSummary[] 
           </thead>
           <tbody>
             {rows.map((row, idx) => (
-              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group">
+              <tr 
+                key={idx} 
+                className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                onClick={() => onSelectInvoice?.(row.original)}
+              >
                 <td className="py-3 px-4 text-center">
-                  <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <input type="checkbox" onClick={(e) => e.stopPropagation()} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 </td>
-                <td className="py-3 px-4 text-sm font-medium text-blue-600 cursor-pointer">{row.id}</td>
+                <td className="py-3 px-4 text-sm font-medium text-blue-600">{row.id}</td>
                 <td className="py-3 px-4 text-sm text-slate-700 font-medium">{row.vendor}</td>
                 <td className="py-3 px-4 text-sm text-slate-500">{row.date}</td>
                 <td className={`py-3 px-4 text-sm font-medium ${row.amount.startsWith("-") ? "text-red-500" : "text-slate-900"}`}>{row.amount}</td>
@@ -85,7 +107,10 @@ export default function ArchiveTable({ invoices }: { invoices: InvoiceSummary[] 
                 <td className="py-3 px-4 text-sm text-slate-500">{row.archivedOn}</td>
                 <td className="py-3 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 transition-colors">
+                    <button 
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onSelectInvoice?.(row.original); }}
+                    >
                       <Eye size={16} />
                     </button>
                     <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded border border-transparent hover:border-blue-100 transition-colors">

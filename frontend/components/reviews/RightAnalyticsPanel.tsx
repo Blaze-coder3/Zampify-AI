@@ -16,7 +16,8 @@ function ReviewSummaryDonut({ data }: { data: Record<string, number> }) {
   const overdue = data?.["overdue"] || 0;
   const escalated = data?.["escalated"] || 0;
   
-  const total = needsReview + dueToday + overdue + escalated || 1;
+  const actualTotal = needsReview + dueToday + overdue + escalated;
+  const total = actualTotal || 1;
   
   // Circumference = 2 * pi * r = 2 * 3.14159 * 40 = 251.3
   const c = 251.3;
@@ -45,7 +46,7 @@ function ReviewSummaryDonut({ data }: { data: Record<string, number> }) {
             <circle cx="50" cy="50" r="40" fill="transparent" stroke="#8b5cf6" strokeWidth="12" strokeDasharray={`${p4} ${c}`} strokeDashoffset={offset4} />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center bg-white m-3 rounded-full shadow-inner">
-            <span className="text-sm font-bold text-slate-700">{total}</span>
+            <span className="text-sm font-bold text-slate-700">{actualTotal}</span>
           </div>
         </div>
         

@@ -9,11 +9,20 @@ interface StatCardProps {
   value: string | number;
   label: string;
   sublabel: string;
+  id: string;
+  isActive: boolean;
+  onClick: (id: string) => void;
 }
 
-function StatCard({ icon: Icon, iconBg, iconColor, value, label, sublabel }: StatCardProps) {
+function StatCard({ icon: Icon, iconBg, iconColor, value, label, sublabel, id, isActive, onClick }: StatCardProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+    <div 
+      onClick={() => onClick(id)}
+      className={cn(
+        "bg-white border rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden cursor-pointer",
+        isActive ? "border-blue-500 ring-1 ring-blue-500" : "border-slate-200"
+      )}
+    >
       <div className={cn("p-3 rounded-xl shrink-0 transition-transform group-hover:scale-110 duration-300", iconBg, iconColor)}>
         <Icon size={22} />
       </div>
@@ -29,13 +38,23 @@ function StatCard({ icon: Icon, iconBg, iconColor, value, label, sublabel }: Sta
   );
 }
 
-export default function StatCards({ analytics }: { analytics: AnalyticsSummary | null }) {
+export default function StatCards({ 
+  analytics, 
+  activeTab, 
+  onSelectTab 
+}: { 
+  analytics: AnalyticsSummary | null,
+  activeTab: string,
+  onSelectTab: (tab: string) => void 
+}) {
   // Extract values from analytics, or default to mockup values if not loaded
-  const needsReview = analytics?.status_distribution?.["needs_review"] || 8;
-  const dueToday = analytics?.status_distribution?.["due_today"] || 3;
-  const overdue = analytics?.status_distribution?.["overdue"] || 6;
-  const slaCompliance = "92%"; // Ideally calculate from analytics.sla_compliance
-  const avgReviewTime = "2.4 hrs";
+  const needsReview = analytics?.status_distribution?.["needs_review"] ?? 0;
+  const dueToday = analytics?.status_distribution?.["due_today"] ?? 0;
+  const overdue = analytics?.status_distribution?.["overdue"] ?? 0;
+  const slaCompliance = "100%"; // Ideally calculate from analytics.sla_compliance
+  const avgReviewTime = "0 hrs";
+
+  const assignedToMe = needsReview + dueToday + overdue + (analytics?.status_distribution?.["escalated"] ?? 0);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -43,9 +62,12 @@ export default function StatCards({ analytics }: { analytics: AnalyticsSummary |
         icon={ClipboardList} 
         iconBg="bg-blue-100" 
         iconColor="text-blue-600"
-        value={14} 
+        value={assignedToMe} 
         label="Assigned to Me" 
         sublabel="Invoices" 
+        id="All Reviews"
+        isActive={activeTab === "All Reviews"}
+        onClick={onSelectTab}
       />
       
       <StatCard 
@@ -55,33 +77,45 @@ export default function StatCards({ analytics }: { analytics: AnalyticsSummary |
         value={needsReview} 
         label="Needs Review" 
         sublabel="High Risk" 
+        id="Needs Review"
+        isActive={activeTab === "Needs Review"}
+        onClick={onSelectTab}
       />
       
       <StatCard 
         icon={CalendarClock} 
         iconBg="bg-amber-100" 
-        iconColor="text-amber-500"
+        iconColor="text-amber-600"
         value={dueToday} 
         label="Due Today" 
         sublabel="Urgent" 
+        id="Due Today"
+        isActive={activeTab === "Due Today"}
+        onClick={onSelectTab}
       />
       
       <StatCard 
         icon={Clock} 
-        iconBg="bg-red-50" 
-        iconColor="text-red-500"
+        iconBg="bg-slate-100" 
+        iconColor="text-slate-600"
         value={overdue} 
         label="Overdue" 
         sublabel="Past Due Date" 
+        id="Overdue"
+        isActive={activeTab === "Overdue"}
+        onClick={onSelectTab}
       />
       
       <StatCard 
         icon={CheckCircle2} 
         iconBg="bg-emerald-100" 
-        iconColor="text-emerald-500"
+        iconColor="text-emerald-600"
         value={slaCompliance} 
         label="SLA Compliance" 
         sublabel="This Month" 
+        id="Completed"
+        isActive={activeTab === "Completed"}
+        onClick={onSelectTab}
       />
       
       <StatCard 
@@ -91,6 +125,9 @@ export default function StatCards({ analytics }: { analytics: AnalyticsSummary |
         value={avgReviewTime} 
         label="Avg. Review Time" 
         sublabel="This Month" 
+        id="AvgTime"
+        isActive={false} // Placeholder
+        onClick={() => {}}
       />
     </div>
   );

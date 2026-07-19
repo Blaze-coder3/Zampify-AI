@@ -119,22 +119,15 @@ export default function Sidebar({
                 { id: 'VendorInvoices', icon: FileText, label: 'Vendor Invoices' },
                 { id: 'VendorQueries', icon: MessageSquare, label: 'Vendor Queries' },
                 { id: 'Exceptions', icon: AlertTriangle, label: 'Exceptions', color: 'text-red-400' },
-                { id: 'Spam', icon: Ban, label: 'Spam' },
-                { id: 'Sent', icon: Send, label: 'Sent' },
-                { id: 'Archived', icon: Archive, label: 'Archived' },
               ] : user.role === 'manager' ? [
                 { id: 'TeamInbox', icon: Inbox, label: 'Team Inbox' },
                 { id: 'VendorEscalations', icon: AlertTriangle, label: 'Vendor Escalations', color: 'text-red-400' },
                 { id: 'Announcements', icon: Bell, label: 'Manager Announcements' },
                 { id: 'TeamMessages', icon: MessageSquare, label: 'Team Messages' },
-                { id: 'Sent', icon: Send, label: 'Sent' },
-                { id: 'Archived', icon: Archive, label: 'Archived' },
               ] : [
                 { id: 'SupportRequests', icon: MessageSquare, label: 'Support Requests' },
                 { id: 'SystemAlerts', icon: AlertTriangle, label: 'System Alerts', color: 'text-red-400' },
                 { id: 'IncidentReports', icon: FileText, label: 'Incident Reports' },
-                { id: 'Sent', icon: Send, label: 'Sent' },
-                { id: 'Archived', icon: Archive, label: 'Archived' },
               ]).map((item, i) => (
                 <button 
                   key={i} 

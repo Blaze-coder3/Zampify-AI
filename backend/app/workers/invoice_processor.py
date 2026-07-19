@@ -15,6 +15,7 @@ Runs as an ARQ background worker — async, retriable, idempotent.
 """
 
 import time
+import json
 import yaml
 import os
 from datetime import datetime, timezone, timedelta
@@ -195,6 +196,10 @@ async def process_invoice(ctx, invoice_id: str):
                     extraction_method=extraction.method,
                     raw_extracted_data=ai_result.extracted_data,
                     field_confidences=ai_result.field_confidences,
+                    ocr_bounding_boxes={
+                        "fields": ai_result.bounding_boxes,
+                        "layout_regions": getattr(extraction, "layout_regions", [])
+                    },
                 )
 
                 await _log_ledger_event(
@@ -300,14 +305,18 @@ async def process_invoice(ctx, invoice_id: str):
 
             # Persist validation results
             for rule_result in validation_summary.results:
+                
+                details_data = rule_result.details if rule_result.details else rule_result.reason
+                if isinstance(details_data, (dict, list)):
+                    details_data = json.dumps(details_data)
+                elif details_data is not None:
+                    details_data = str(details_data)
+
                 vr = ValidationResult(
                     invoice_id=invoice_id,
                     rule_id=rule_result.rule_id,
-                    rule_name=rule_result.rule_name,
                     status=rule_result.status,
-                    severity=rule_result.severity,
-                    reason=rule_result.reason,
-                    details=rule_result.details,
+                    details=details_data,
                 )
                 db.add(vr)
             await db.commit()

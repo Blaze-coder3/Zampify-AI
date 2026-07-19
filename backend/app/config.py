@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     FEATHERLESS_API_KEY: str = ""
     FEATHERLESS_BASE_URL: str = "https://api.featherless.ai/v1"
     FEATHERLESS_MODEL: str = "meta-llama/Llama-3.3-70B-Instruct"
+    HUGGGING_FACE_KEY: Optional[str] = None
 
     # File Storage
     UPLOAD_DIR: str = "./uploads"

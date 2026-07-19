@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { listInvoices, getInvoice, InvoiceSummary, InvoiceDetail, listCommunicationCases, CommunicationCase, getDashboardStats, getPipelineStatus, DashboardStats } from "@/lib/api";
+import { listInvoices, getInvoice, InvoiceSummary, InvoiceDetail, listCommunicationCases, CommunicationCase, DashboardStats } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
@@ -12,7 +12,6 @@ import InvoiceDetailView from "@/components/InvoiceDetailView";
 import TodaysWorkHeader from "@/components/workspace/TodaysWorkHeader";
 import QuickActionCards from "@/components/workspace/QuickActionCards";
 import SmartWorkQueue from "@/components/workspace/SmartWorkQueue";
-import AICopilot from "@/components/workspace/AICopilot";
 import TodaysPipeline from "@/components/workspace/TodaysPipeline";
 import ActivityFeed from "@/components/workspace/ActivityFeed";
 import MyPerformance from "@/components/workspace/MyPerformance";
@@ -47,21 +46,29 @@ export default function Dashboard() {
       const casesRes = await listCommunicationCases(activeFolder, activeFilters);
       setCases(casesRes.data);
 
+      let invs: InvoiceSummary[] = [];
       // Only fetch pure invoices if we are in an invoice-related context
       if (activeFolder === "VendorInvoices" || activeFolder === "Inbox") {
         const invoicesRes = await listInvoices(undefined, 50);
-        setInvoices(invoicesRes.data);
+        invs = invoicesRes.data;
+        setInvoices(invs);
       } else {
         setInvoices([]);
       }
 
-      // Fetch global dashboard stats
-      const [statsRes, pipelineRes] = await Promise.all([
-        getDashboardStats(),
-        getPipelineStatus()
-      ]);
-      setStats(statsRes.data);
-      setPipeline(pipelineRes.data);
+      // Compute stats locally instead of broken API calls
+      setStats({
+        needs_review: invs.filter(i => i.status === 'needs_review' || i.decision === 'investigating').length,
+        waiting_on_vendor: casesRes.data.filter(c => c.status === 'Pending Vendor').length,
+        due_within_2h: invs.filter(i => i.priority === 'High' && (i.status === 'needs_review' || i.decision === 'investigating')).length
+      });
+
+      setPipeline({
+        received: invs.length,
+        classifying: invs.filter(i => i.status === 'processing').length,
+        needs_review: invs.filter(i => i.status === 'needs_review' || i.decision === 'investigating').length,
+        approved: invs.filter(i => i.status === 'approved' || i.status === 'completed').length,
+      });
 
     } catch (e) {
       router.push("/login");
@@ -179,10 +186,10 @@ export default function Dashboard() {
           'Inbox': cases.length,
           'reviews': stats?.needs_review || 0,
           'needs_review': stats?.needs_review || 0,
-          'duplicate': invoices.filter(i => i.status === 'failed').length, // Using failed as proxy for duplicates
-          'urgent': stats?.needs_review || 0, // Using needs_review as urgent proxy
-          'due_today': invoices.filter(i => i.status === 'validating').length, 
-          'waiting_vendor': cases.filter(c => c.status === "WaitingVendor").length
+          'duplicate': stats?.duplicates_detected || 0,
+          'urgent': stats?.due_within_2h || 0,
+          'due_today': stats?.due_within_2h || 0, 
+          'waiting_vendor': stats?.waiting_on_vendor || 0
         }}
       />
       
@@ -212,6 +219,7 @@ export default function Dashboard() {
                    onSelectCase={handleSelectCase}
                    onRefresh={load}
                    activeFilter={activeFilter}
+                   activeFilters={activeFilters}
                  />
               </div>
 
@@ -222,10 +230,6 @@ export default function Dashboard() {
               </div>
             </div>
           </main>
-          
-          <aside className="w-[320px] 2xl:w-[360px] shrink-0 border-l border-gray-200 bg-gray-50/50 flex flex-col overflow-y-auto p-6 hidden lg:flex">
-             <AICopilot stats={stats} cases={cases} invoices={invoices} />
-          </aside>
 
           {selectedInvoice && (
             <InvoiceDetailView 

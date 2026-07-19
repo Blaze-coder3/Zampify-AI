@@ -12,7 +12,7 @@ const TABS = [
   "Deleted"
 ];
 
-export default function ArchiveSearchTabs() {
+export default function ArchiveSearchTabs({ searchQuery, onSearchChange }: { searchQuery: string, onSearchChange: (q: string) => void }) {
   const [activeTab, setActiveTab] = useState("All Documents");
 
   return (
@@ -23,6 +23,8 @@ export default function ArchiveSearchTabs() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by invoice number, vendor name, PO number, amount, email subject..."
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-shadow placeholder:text-slate-400"
           />

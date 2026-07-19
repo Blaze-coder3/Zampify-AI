@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { listInvoices, InvoiceSummary, getArchiveSummary, ArchiveSummary } from "@/lib/api";
+import { listInvoices, InvoiceSummary, getInvoice, InvoiceDetail, ArchiveSummary } from "@/lib/api";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
 import ArchiveHeader from "@/components/archive/ArchiveHeader";
@@ -10,25 +10,50 @@ import ArchiveStatCards from "@/components/archive/ArchiveStatCards";
 import ArchiveSearchTabs from "@/components/archive/ArchiveSearchTabs";
 import ArchiveTable from "@/components/archive/ArchiveTable";
 import ArchiveRightSidebar from "@/components/archive/ArchiveRightSidebar";
+import InvoiceDetailView from "@/components/InvoiceDetailView";
 
 export default function SearchAndArchivePage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
-  const [archiveSummary, setArchiveSummary] = useState<any>({} as any);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const archiveSummary = useMemo(() => {
+    if (!invoices.length) return null;
+    const total_invoices = invoices.length;
+    const archived = invoices.filter(i => ['approved', 'rejected', 'completed', 'archived'].includes(i.status || '')).length;
+    const exceptions = invoices.filter(i => ['needs_review', 'failed'].includes(i.status || '') || i.decision === 'investigating').length;
+    const total_spend = invoices.reduce((sum, i) => sum + (i.grand_total || 0), 0);
+    const vendors = new Set(invoices.filter(i => i.vendor_name).map(i => i.vendor_name)).size;
+    
+    const status_distribution = {
+      approved: invoices.filter(i => i.status === 'approved' || i.status === 'completed').length,
+      needs_review: invoices.filter(i => i.status === 'needs_review' || i.decision === 'investigating').length,
+      escalated: invoices.filter(i => i.status === 'escalated').length,
+      overdue: invoices.filter(i => i.status === 'failed' || i.status === 'rejected').length, // mapping rejected/failed here for the donut
+      closed: invoices.filter(i => i.status === 'archived').length
+    };
+    
+    return {
+      kpis: {
+        total_invoices,
+        archived,
+        exceptions,
+        total_spend,
+        vendors_count: vendors
+      },
+      status_distribution
+    };
+  }, [invoices]);
 
   const load = useCallback(async () => {
     try {
       const token = localStorage.getItem("zampify_token");
       if (!token) { router.push("/login"); return; }
       
-      const [invoicesRes, summaryRes] = await Promise.all([
-        listInvoices(),
-        getArchiveSummary()
-      ]);
-      
+      const invoicesRes = await listInvoices();
       setInvoices(invoicesRes.data);
-      setArchiveSummary(summaryRes);
     } catch (e) {
       console.error(e);
       // fallback in case of backend failure for demo
@@ -37,6 +62,16 @@ export default function SearchAndArchivePage() {
       setLoading(false);
     }
   }, [router]);
+
+  const handleSelectInvoice = async (summary: InvoiceSummary) => {
+    try {
+      const res = await getInvoice(summary.id);
+      setSelectedInvoice(res.data);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to load invoice details.");
+    }
+  };
 
   useEffect(() => {
     load();
@@ -64,12 +99,12 @@ export default function SearchAndArchivePage() {
             <div className="p-6 pb-2 max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
               <ArchiveHeader />
               <ArchiveStatCards summary={archiveSummary} />
-              <ArchiveSearchTabs />
+              <ArchiveSearchTabs searchQuery={searchQuery} onSearchChange={setSearchQuery} />
               
               <div className="flex flex-col xl:flex-row gap-6 mt-4 flex-1 min-h-0">
                 {/* Main Left Content: The Table */}
                 <div className="flex-1 min-w-0 flex flex-col pb-6">
-                  <ArchiveTable invoices={invoices} />
+                  <ArchiveTable invoices={invoices} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSelectInvoice={handleSelectInvoice} />
                 </div>
                 
                 {/* Right Sidebar: Filters and Analytics */}
@@ -81,6 +116,13 @@ export default function SearchAndArchivePage() {
           </div>
         </div>
       </div>
+      {selectedInvoice && (
+        <InvoiceDetailView 
+          invoice={selectedInvoice} 
+          onClose={() => setSelectedInvoice(null)} 
+          onRefresh={load} 
+        />
+      )}
     </div>
   );
 }

@@ -14,12 +14,10 @@ interface QuickActionCardsProps {
 export default function QuickActionCards({ onFilter, invoices = [], stats }: QuickActionCardsProps) {
   // Compute real counts from stats and invoices
   const needsReviewCount = stats?.needs_review || 0;
-  
-  // Example logic for the other cards
-  const waitingVendorCount = 0; // Backend currently doesn't track this at invoice level
-  const due2hCount = invoices.filter(i => i.status === 'validating').length; 
-  const duplicatesCount = invoices.filter(i => i.status === 'failed').length;
-  const readyCount = invoices.filter(i => i.status === 'validated').length;
+  const waitingVendorCount = stats?.waiting_on_vendor || 0;
+  const due2hCount = stats?.due_within_2h || 0; 
+  const duplicatesCount = stats?.duplicates_detected || 0;
+  const readyCount = stats?.ready_to_approve || 0;
 
   const cards = [
     {

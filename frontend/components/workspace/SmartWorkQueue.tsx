@@ -1,7 +1,8 @@
 "use client";
 
-import { RefreshCcw, Filter, ArrowUpDown, CheckCircle2, AlertTriangle, FileText, Bot, Clock, ChevronRight, ArrowUp, ArrowRight, ArrowDown, Mail, AlertCircle, Search, User, HelpCircle, ChevronDown, ChevronLeft } from "lucide-react";
-import { InvoiceSummary, CommunicationCase } from "@/lib/api";
+import { useState } from "react";
+import { RefreshCcw, Filter, ArrowUpDown, CheckCircle2, AlertTriangle, FileText, Bot, Clock, ChevronRight, ArrowUp, ArrowRight, ArrowDown, Mail, AlertCircle, Search, User, HelpCircle, ChevronDown, ChevronLeft, X, Tag as TagIcon, Check } from "lucide-react";
+import { InvoiceSummary, CommunicationCase, bulkApproveInvoices, bulkAssignInvoices, bulkTagInvoices } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -15,9 +16,17 @@ interface SmartWorkQueueProps {
   onSelectCase?: (c: CommunicationCase) => void;
   onRefresh: () => void;
   activeFilter?: string | null;
+  activeFilters?: string[];
 }
 
 const AI_RECOMMENDATIONS: Record<string, { label: string; icon: any; color: string }> = {
+  "Ready for Approval": { label: "Ready for Approval", icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+  "Review Required": { label: "Review Required", icon: AlertTriangle, color: "text-orange-600 bg-orange-50 border-orange-200" },
+  "Duplicate Suspected": { label: "Duplicate Suspected", icon: AlertTriangle, color: "text-red-600 bg-red-50 border-red-200" },
+  "Price Variance": { label: "Price Variance", icon: AlertTriangle, color: "text-amber-600 bg-amber-50 border-amber-200" },
+  "Missing PO": { label: "Missing PO", icon: AlertTriangle, color: "text-purple-600 bg-purple-50 border-purple-200" },
+  "Needs Vendor Reply": { label: "Needs Vendor Reply", icon: ArrowRight, color: "text-blue-600 bg-blue-50 border-blue-200" },
+  "Processing": { label: "Processing", icon: RefreshCcw, color: "text-slate-600 bg-slate-50 border-slate-200" },
   "approved": { label: "Ready for Approval", icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
   "needs_review": { label: "Review Required", icon: AlertTriangle, color: "text-orange-600 bg-orange-50 border-orange-200" },
   "duplicate": { label: "Duplicate Suspected", icon: AlertTriangle, color: "text-red-600 bg-red-50 border-red-200" },
@@ -36,37 +45,180 @@ export default function SmartWorkQueue({
   onSelectInvoice, 
   onSelectCase,
   onRefresh, 
-  activeFilter 
+  activeFilter, activeFilters = []
 }: SmartWorkQueueProps) {
   
   const { user } = useAuth();
   const isCommunicationView = activeFolder !== "VendorInvoices";
   
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  
+  // Feature states
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc'|'desc' } | null>(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  
+  const handleSort = (key: string) => {
+    let direction: 'asc'|'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = isCommunicationView ? filteredCases.map(c => c.id) : filteredInvoices.map(i => i.id);
+      setSelectedIds(new Set(allIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await bulkApproveInvoices(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      onRefresh();
+    } catch (e) {
+      alert("Failed to approve selected.");
+    }
+  };
+
+  const handleBulkAssign = async (userId: string) => {
+    if (selectedIds.size === 0) return;
+    try {
+      await bulkAssignInvoices(Array.from(selectedIds), userId);
+      setSelectedIds(new Set());
+      setShowAssignModal(false);
+      onRefresh();
+    } catch (e) {
+      alert("Failed to assign selected.");
+    }
+  };
+  
+  const handleBulkTag = async () => {
+    if (selectedIds.size === 0 || !tagInput.trim()) return;
+    try {
+      await bulkTagInvoices(Array.from(selectedIds), tagInput.trim());
+      setTagInput('');
+      setSelectedIds(new Set());
+      setShowTagModal(false);
+      onRefresh();
+    } catch (e) {
+      alert("Failed to tag selected.");
+    }
+  };
+  
   // Apply filtering based on activeFilter
   let filteredInvoices = invoices;
   let filteredCases = cases;
 
-  if (activeFilter) {
-    if (activeFilter === 'approved') {
-       filteredInvoices = invoices.filter(i => i.status === 'approved');
-       filteredCases = cases.filter(c => c.status === 'Closed');
-    } else if (activeFilter === 'needs_review') {
-       filteredInvoices = invoices.filter(i => i.status === 'needs_review');
-       filteredCases = cases.filter(c => c.status === 'NeedsReview');
-    } else {
-       if (activeFilter === 'waiting_vendor') {
-           filteredInvoices = invoices.filter(i => i.status !== 'approved' && i.status !== 'needs_review').slice(0, 5);
-           filteredCases = cases.filter(c => c.status === 'WaitingVendor');
-       } else if (activeFilter === 'due_2h') {
-           filteredInvoices = invoices.slice(0, 3);
-           filteredCases = cases.slice(0, 2);
-       } else if (activeFilter === 'duplicate') {
-           filteredInvoices = invoices.filter(i => i.overall_confidence && i.overall_confidence < 0.6).slice(0, 2);
-       }
-    }
+  // Merge activeFilter (singular top cards) and activeFilters (plural sidebar)
+  const allFilters = new Set(activeFilters);
+  if (activeFilter) allFilters.add(activeFilter);
+
+  // Apply Quick Action Card filters
+  if (activeFilter === 'needs_review') {
+    filteredInvoices = filteredInvoices.filter(i => i.status === 'needs_review');
+  } else if (activeFilter === 'waiting_vendor') {
+    filteredInvoices = filteredInvoices.filter(i => i.status === 'triage');
+  } else if (activeFilter === 'due_2h') {
+    const twoHoursAgo = new Date(Date.now() - 22 * 60 * 60 * 1000); // matching backend SLA logic
+    filteredInvoices = filteredInvoices.filter(i => 
+      i.received_at && new Date(i.received_at) < twoHoursAgo &&
+      !['approved', 'rejected', 'archived', 'failed'].includes(i.status)
+    );
+  } else if (activeFilter === 'ready_approve') {
+    filteredInvoices = filteredInvoices.filter(i => i.status === 'validated' && i.decision !== 'approved');
+  } else if (activeFilter === 'duplicates') {
+    // We can't filter by duplicate rule here easily without `validations` array in `InvoiceSummary`, 
+    // but we can fake it or if we have it in the real payload, use it.
+    filteredInvoices = filteredInvoices.filter(i => i.status === 'failed' || i.overall_confidence! < 0.5); // Heuristic
+  }
+  // Text search
+  if (filterQuery) {
+    const q = filterQuery.toLowerCase();
+    filteredInvoices = filteredInvoices.filter(i => 
+      (i.vendor_name || '').toLowerCase().includes(q) || 
+      (i.invoice_number || '').toLowerCase().includes(q) ||
+      i.id.toLowerCase().includes(q)
+    );
   }
 
-  const itemsCount = isCommunicationView ? filteredCases.length : filteredInvoices.length;
+  // Sorting
+  if (sortConfig) {
+    filteredInvoices = [...filteredInvoices].sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      if (sortConfig.key === 'received_at') {
+        aVal = a.received_at ? new Date(a.received_at).getTime() : 0;
+        bVal = b.received_at ? new Date(b.received_at).getTime() : 0;
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  if (allFilters.size > 0) {
+      if (allFilters.has('approved')) {
+          filteredInvoices = filteredInvoices.filter(i => i.status === 'approved' || i.status === 'completed');
+      } else {
+          filteredInvoices = filteredInvoices.filter(i => !['approved', 'completed', 'rejected'].includes(i.status));
+      }
+      if (allFilters.has('needs_review')) {
+          filteredInvoices = filteredInvoices.filter(i => i.status === 'needs_review');
+          filteredCases = filteredCases.filter(c => c.status === 'NeedsReview');
+      }
+      if (allFilters.has('waiting_vendor')) {
+          filteredInvoices = filteredInvoices.filter(i => i.status === 'triage');
+          filteredCases = filteredCases.filter(c => c.status === 'WaitingVendor');
+      }
+      if (allFilters.has('due_2h') || allFilters.has('due_today') || allFilters.has('urgent')) {
+          filteredInvoices = filteredInvoices.filter(i => {
+              if (!i.received_at) return false;
+              const ageMs = new Date().getTime() - new Date(i.received_at).getTime();
+              return ageMs > 22 * 60 * 60 * 1000 && !['approved', 'rejected', 'archived', 'failed'].includes(i.status || '');
+          });
+          filteredCases = filteredCases.filter(c => c.priority === 'High');
+      }
+      if (allFilters.has('duplicate')) {
+          filteredInvoices = filteredInvoices.filter(i => i.status === 'failed');
+      }
+  }
+
+  // Calculate pagination bounds
+  const totalItems = isCommunicationView ? filteredCases.length : filteredInvoices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  if (isCommunicationView) {
+      filteredCases = filteredCases.slice(startIndex, endIndex);
+  } else {
+      filteredInvoices = filteredInvoices.slice(startIndex, endIndex);
+  }
+
+
+  
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
@@ -77,24 +229,15 @@ export default function SmartWorkQueue({
             {isCommunicationView ? "Communication Queue" : "Smart Work Queue"}
           </h2>
           <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-            ({itemsCount})
+            ({totalItems})
           </span>
           <HelpCircle className="w-4 h-4 text-gray-400 ml-1" />
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex items-center text-sm text-gray-600 gap-2 cursor-pointer mr-2">
-            View: <span className="font-semibold text-blue-600">Smart (Recommended)</span> <ChevronDown className="w-4 h-4" />
-          </div>
-          <button 
-            className="h-8 px-3 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 gap-2"
-          >
-            <Filter className="w-3.5 h-3.5" /> Filter
-          </button>
-          <button 
-            className="h-8 px-3 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 gap-2"
-          >
-            <ArrowUpDown className="w-3.5 h-3.5" /> Sort
+          <button onClick={() => setShowFilterModal(true)} className="relative h-8 px-3 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 gap-2">
+            <Filter className="w-3.5 h-3.5" /> {filterQuery ? "Filtered" : "Filter"}
+            {filterQuery && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full"></span>}
           </button>
           <button onClick={onRefresh} className="p-1.5 text-slate-500 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors shadow-sm ml-2">
             <RefreshCcw size={14} />
@@ -105,13 +248,13 @@ export default function SmartWorkQueue({
       {/* Bulk Actions Bar */}
       <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
          <div className="flex items-center gap-3">
-            <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" onChange={handleSelectAll} checked={selectedIds.size > 0 && selectedIds.size === totalItems} />
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select All</span>
          </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Assign</button>
-            <button className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Tag</button>
-            {!isCommunicationView && user.role !== 'admin' && <button className="px-3 py-1 bg-white border border-slate-200 text-emerald-600 text-xs font-medium rounded shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50">Approve Selected</button>}
+            <button onClick={() => setShowAssignModal(true)} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Assign</button>
+            <button onClick={() => setShowTagModal(true)} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Tag</button>
+            {!isCommunicationView && user.role !== 'admin' && <button onClick={handleBulkApprove} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-emerald-600 text-xs font-medium rounded shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50">Approve Selected</button>}
          </div>
       </div>
 
@@ -123,12 +266,12 @@ export default function SmartWorkQueue({
               <th className="px-4 py-3 w-10"></th>
               {!isCommunicationView ? (
                 <>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Recommendation</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confidence</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">SLA</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Priority</th>
+                  <th onClick={() => handleSort('id')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Invoice {sortConfig?.key==='id' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('vendor_name')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Vendor {sortConfig?.key==='vendor_name' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('ai_recommendation')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">AI Recommendation {sortConfig?.key==='ai_recommendation' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('overall_confidence')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Confidence {sortConfig?.key==='overall_confidence' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('received_at')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">SLA {sortConfig?.key==='received_at' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('priority')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Priority {sortConfig?.key==='priority' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                 </>
               ) : (
                 <>
@@ -148,22 +291,14 @@ export default function SmartWorkQueue({
             {!isCommunicationView ? filteredInvoices.map((inv) => {
               const conf = inv.overall_confidence || 0;
               const confPct = conf > 1 ? Math.round(conf) : Math.round(conf * 100);
-              const isHighRisk = confPct < 70;
-              const isMediumRisk = confPct >= 70 && confPct < 90;
-              const priority = isHighRisk ? 'High' : isMediumRisk ? 'Medium' : 'Low';
+              const priority = inv.priority || 'Medium';
               
-              let recKey = "default";
-              if (inv.status === "approved") recKey = "approved";
-              else if (inv.status === "needs_review") {
-                  if (conf < 0.5) recKey = "duplicate";
-                  else if (conf < 0.7) recKey = "variance";
-                  else recKey = "needs_review";
-              }
-
-              const rec = AI_RECOMMENDATIONS[recKey] || AI_RECOMMENDATIONS.default;
+              const recKey = inv.ai_recommendation || "Processing";
+              const rec = AI_RECOMMENDATIONS[recKey] || AI_RECOMMENDATIONS["Processing"] || AI_RECOMMENDATIONS.default;
               const RecIcon = rec.icon;
-              const slaHours = Math.floor(Math.random() * 48);
-              const isSlaUrgent = slaHours < 4;
+              
+              const slaStr = inv.sla_remaining || "24h 0m";
+              const isSlaUrgent = slaStr === "Overdue" || (slaStr.includes('h') && parseInt(slaStr.split('h')[0]) < 2);
 
               return (
                 <tr 
@@ -175,7 +310,7 @@ export default function SmartWorkQueue({
                   )}
                 >
                   <td className="px-4 py-3">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" onClick={e => e.stopPropagation()}/>
+                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedIds.has(inv.id)} onChange={() => handleSelectOne(inv.id)} onClick={e => e.stopPropagation()}/>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
@@ -202,7 +337,7 @@ export default function SmartWorkQueue({
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("text-xs font-bold", isSlaUrgent ? "text-red-600" : "text-slate-600")}>
-                        {slaHours}h left
+                        {slaStr}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -233,7 +368,7 @@ export default function SmartWorkQueue({
                   )}
                 >
                   <td className="px-4 py-3">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" onClick={e => e.stopPropagation()}/>
+                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedIds.has(c.id)} onChange={() => handleSelectOne(c.id)} onClick={e => e.stopPropagation()}/>
                   </td>
                   <td className="px-4 py-3 max-w-[200px] truncate">
                     <div className="flex flex-col">
@@ -301,23 +436,122 @@ export default function SmartWorkQueue({
       {/* Pagination Footer */}
       <div className="border-t border-gray-100 p-4 flex items-center justify-between bg-white mt-auto shrink-0">
         <div className="text-sm text-gray-500">
-          Showing 1 to {itemsCount > 6 ? 6 : itemsCount} of {itemsCount} {isCommunicationView ? 'threads' : 'invoices'}
+          Showing {totalItems === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} {isCommunicationView ? 'threads' : 'invoices'}
         </div>
         <div className="flex items-center gap-1">
-          <button className="w-8 h-8 inline-flex items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 opacity-50 cursor-not-allowed">
+          <button 
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={safeCurrentPage === 1}
+            className="w-8 h-8 inline-flex items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <ChevronLeft className="w-4 h-4"/>
           </button>
-          <button className="w-8 h-8 rounded-md border border-blue-600 bg-blue-50 text-blue-600 text-sm font-medium">1</button>
-          <button className="w-8 h-8 rounded-md text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">2</button>
-          <button className="w-8 h-8 rounded-md text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">3</button>
-          <span className="px-2 text-gray-400">...</span>
-          <button className="w-8 h-8 rounded-md text-gray-600 hover:bg-gray-100 text-sm font-medium transition-colors">14</button>
-          <button className="w-8 h-8 inline-flex items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 transition-colors">
+          
+          <span className="px-3 text-sm text-gray-600 font-medium">
+            Page {safeCurrentPage} of {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={safeCurrentPage === totalPages || totalPages === 0}
+            className="w-8 h-8 inline-flex items-center justify-center rounded-md border border-gray-200 bg-white hover:bg-gray-100 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
             <ChevronRight className="w-4 h-4"/>
           </button>
         </div>
-        <div className="text-sm text-gray-500">6 / page</div>
+        <div className="text-sm text-gray-500 flex items-center gap-2">
+          <select 
+            value={itemsPerPage} 
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="border border-slate-200 rounded p-1 bg-white text-slate-700 cursor-pointer"
+          >
+            <option value={6}>6 / page</option>
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
+        </div>
       </div>
+
+      {/* Modals */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setShowFilterModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-96 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="font-semibold text-slate-800">Filter Invoices</h3>
+              <button onClick={() => setShowFilterModal(false)}><X className="w-4 h-4 text-slate-500"/></button>
+            </div>
+            <div className="p-4">
+              <label className="text-xs font-medium text-slate-600 mb-1 block">Search Query (Vendor, ID, Invoice #)</label>
+              <input 
+                autoFocus
+                type="text" 
+                value={filterQuery}
+                onChange={e => setFilterQuery(e.target.value)}
+                placeholder="Search..." 
+                className="w-full text-sm border-slate-200 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
+              />
+            </div>
+            <div className="p-4 bg-slate-50 flex justify-end gap-2 border-t">
+              <button onClick={() => { setFilterQuery(''); setShowFilterModal(false); }} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 rounded-md">Clear</button>
+              <button onClick={() => setShowFilterModal(false)} className="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md">Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setShowAssignModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-80 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="font-semibold text-slate-800">Assign To</h3>
+              <button onClick={() => setShowAssignModal(false)}><X className="w-4 h-4 text-slate-500"/></button>
+            </div>
+            <div className="p-2">
+               {[
+                 {id: '1', name: 'Sarah (AP Lead)'}, 
+                 {id: '2', name: 'John Doe'},
+                 {id: '3', name: 'Accounting Team'}
+               ].map(u => (
+                 <button key={u.id} onClick={() => handleBulkAssign(u.id)} className="w-full text-left p-3 hover:bg-slate-50 text-sm flex items-center gap-2 border-b last:border-0 text-slate-700">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">{u.name[0]}</div>
+                    {u.name}
+                 </button>
+               ))}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showTagModal && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setShowTagModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-96 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="font-semibold text-slate-800">Add Tag</h3>
+              <button onClick={() => setShowTagModal(false)}><X className="w-4 h-4 text-slate-500"/></button>
+            </div>
+            <div className="p-4">
+              <label className="text-xs font-medium text-slate-600 mb-1 block">Tag Name</label>
+              <input 
+                autoFocus
+                type="text" 
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                placeholder="e.g. Urgent Review, Audit..." 
+                className="w-full text-sm border-slate-200 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
+                onKeyDown={e => e.key === 'Enter' && handleBulkTag()}
+              />
+            </div>
+            <div className="p-4 bg-slate-50 flex justify-end gap-2 border-t">
+              <button onClick={() => setShowTagModal(false)} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 rounded-md">Cancel</button>
+              <button onClick={handleBulkTag} disabled={!tagInput.trim()} className="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:opacity-50">Save Tag</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

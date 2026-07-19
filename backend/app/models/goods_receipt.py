@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone, date
 from typing import Optional
-from sqlalchemy import String, Float, DateTime, Date, ForeignKey, JSON
+from sqlalchemy import String, Float, DateTime, Date, ForeignKey, JSON, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -11,20 +11,22 @@ def utcnow():
 class GoodsReceipt(Base):
     __tablename__ = "goods_receipts"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    gr_number: Mapped[str] = mapped_column(String, index=True, unique=True)
-    po_id: Mapped[str] = mapped_column(String, ForeignKey("purchase_orders.id"), index=True)
-    vendor_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("vendors.id"), nullable=True, index=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    gr_number: Mapped[str] = mapped_column(String, unique=True, index=True)
+    po_number: Mapped[str] = mapped_column(String, ForeignKey("purchase_orders.id"), nullable=False, index=True)
+    line_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
-    # Financials / Matching
-    total_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    currency: Mapped[Optional[str]] = mapped_column(String(3), nullable=True, default="USD")
+    received_qty: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    received_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    warehouse: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="Received")
     
-    # BPI 2019 Dataset fields
-    status: Mapped[str] = mapped_column(String, default="received", index=True)
-    items: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # List of received items
-    
-    receipt_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    # Old fields for compatibility
+    invoice_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("invoices.id"), nullable=True)
+    received_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    items: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(

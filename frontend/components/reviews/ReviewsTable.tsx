@@ -38,15 +38,26 @@ function RiskPill({ level }: { level: "High" | "Medium" | "Low" }) {
   return <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-500"><span className="text-emerald-500">↓</span> Low</span>;
 }
 
-export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] }) {
-  const [activeTab, setActiveTab] = useState("All Reviews");
+export default function ReviewsTable({ 
+  invoices,
+  activeTab,
+  onSelectTab,
+  onSelectInvoice
+}: { 
+  invoices: InvoiceSummary[],
+  activeTab: string,
+  onSelectTab: (tab: string) => void,
+  onSelectInvoice?: (inv: InvoiceSummary) => void
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  // In a real app, map real invoices to these fields
-  // Using some dummy data merged with real invoice data where possible
-  const rows = invoices.map((inv) => {
+  const allRows = invoices.map((inv) => {
     const risk = (inv.overall_confidence || 100) < 70 ? "High" : (inv.overall_confidence || 100) < 90 ? "Medium" : "Low";
     
     return {
+      original: inv,
       id: inv.invoice_number,
       vendor: inv.vendor_name || "Unknown",
       date: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
@@ -61,6 +72,40 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
     };
   });
 
+  // Filter rows by Active Tab
+  const tabFiltered = allRows.filter(row => {
+    const s = row.status?.toLowerCase() || "";
+    if (activeTab === "All Reviews") return s !== "approved" && s !== "completed" && s !== "rejected";
+    if (activeTab === "Needs Review") return s === "needs review" || s === "needs_review";
+    if (activeTab === "Due Today") return s === "due today" || s === "due_today";
+    if (activeTab === "Overdue") return s === "overdue";
+    if (activeTab === "Escalated") return s === "escalated";
+    if (activeTab === "Completed") return s === "approved" || s === "completed";
+    return true;
+  });
+
+  // Filter rows by Search Query
+  const searchFiltered = tabFiltered.filter(row => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (row.id?.toLowerCase().includes(q)) ||
+      (row.vendor?.toLowerCase().includes(q)) ||
+      (row.amount?.toLowerCase().includes(q))
+    );
+  });
+
+  // Pagination Slice
+  const totalEntries = searchFiltered.length;
+  const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+  const paginatedRows = searchFiltered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
       {/* Tabs */}
@@ -68,7 +113,10 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
         {TABS.map(tab => (
           <div 
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              onSelectTab(tab);
+              setCurrentPage(1); // Reset page on tab change
+            }}
             className={cn(
               "px-4 py-4 text-sm font-medium cursor-pointer whitespace-nowrap transition-colors border-b-2",
               activeTab === tab 
@@ -90,19 +138,24 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
               type="text" 
               placeholder="Search by invoice, vendor, PO..."
               className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset page on search
+              }}
             />
           </div>
           
-          <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none">
+          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
             <option>Risk Level (All)</option>
           </select>
-          <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none">
+          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
             <option>Priority (All)</option>
           </select>
-          <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none">
+          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
             <option>Invoice Type (All)</option>
           </select>
-          <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none">
+          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
             <option>Status (All)</option>
           </select>
         </div>
@@ -132,9 +185,13 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, idx) => (
-              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group">
-                <td className="py-3 px-6 text-sm font-medium text-blue-600 cursor-pointer">{row.id}</td>
+            {paginatedRows.map((row, idx) => (
+              <tr 
+                key={idx} 
+                className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                onClick={() => onSelectInvoice?.(row.original)}
+              >
+                <td className="py-3 px-6 text-sm font-medium text-blue-600">{row.id}</td>
                 <td className="py-3 px-4 text-sm text-slate-700 font-medium">{row.vendor}</td>
                 <td className="py-3 px-4 text-sm text-slate-500">{row.date}</td>
                 <td className="py-3 px-4 text-sm text-slate-900 font-medium">{row.amount}</td>
@@ -147,7 +204,12 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
                 <td className="py-3 px-4 text-center"><StatusPill status={row.status} /></td>
                 <td className="py-3 px-6 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="text-sm font-medium text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">Review</button>
+                    <button 
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); onSelectInvoice?.(row.original); }}
+                    >
+                      Review
+                    </button>
                     <button className="p-1 text-slate-400 hover:text-slate-600 rounded">
                       <MoreVertical size={16} />
                     </button>
@@ -162,15 +224,39 @@ export default function ReviewsTable({ invoices }: { invoices: InvoiceSummary[] 
       {/* Pagination */}
       <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/50">
         <div className="text-sm text-slate-500">
-          Showing {rows.length === 0 ? 0 : 1} to {rows.length} of {rows.length} entries
+          Showing {totalEntries === 0 ? 0 : ((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalEntries)} of {totalEntries} entries
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-600 disabled:opacity-50"><ChevronLeft size={18} /></button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-blue-600 bg-blue-50 text-blue-600 text-sm font-medium">1</button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 text-sm hover:bg-slate-50 hover:border-slate-300">2</button>
-          <button className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-600"><ChevronRight size={18} /></button>
-          <select className="ml-4 px-2 py-1 border border-slate-200 rounded text-sm text-slate-600 bg-white focus:outline-none">
-            <option>10 / page</option>
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          
+          <span className="text-sm text-slate-600 px-2 font-medium">Page {currentPage} of {totalPages}</span>
+
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-white hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={18} />
+          </button>
+          
+          <select 
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="ml-4 px-2 py-1 border border-slate-200 rounded text-sm text-slate-600 bg-white focus:outline-none cursor-pointer"
+          >
+            <option value={5}>5 / page</option>
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+            <option value={50}>50 / page</option>
           </select>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Search, Clock, FileText, CheckCircle2, AlertTriangle, Play, Check } from "lucide-react";
+import { X, Search, Clock, FileText, CheckCircle2, AlertTriangle, Play, Check, AlertCircle } from "lucide-react";
 import { InvoiceDetail } from "@/lib/api";
 import DocumentViewer from "./DocumentViewer";
 import ActionHub from "./ActionHub";
@@ -13,9 +13,15 @@ interface InvoiceDetailViewProps {
 
 export default function InvoiceDetailView({ invoice, onClose, onRefresh }: InvoiceDetailViewProps) {
   const [activeTab, setActiveTab] = useState("AI Interpretation");
+  const [isFollowing, setIsFollowing] = useState(false);
 
   return (
-    <div className="absolute inset-y-0 right-0 w-[85%] bg-slate-50 shadow-2xl flex flex-col transform transition-transform duration-300 z-30 border-l border-slate-200">
+    <>
+      <div 
+        className="fixed inset-0 bg-slate-900/20 backdrop-blur-[1px] z-20 transition-opacity"
+        onClick={onClose}
+      />
+      <div className="absolute inset-y-0 right-0 w-[85%] bg-slate-50 shadow-2xl flex flex-col transform transition-transform duration-300 z-30 border-l border-slate-200">
       {/* Header */}
       <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-4">
@@ -33,7 +39,14 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors">Follow +</button>
+          <button 
+            onClick={() => setIsFollowing(!isFollowing)}
+            className={cn("text-sm font-medium transition-colors flex items-center gap-1.5", 
+              isFollowing ? "text-slate-600 hover:text-slate-800" : "text-blue-600 hover:text-blue-800"
+            )}
+          >
+            {isFollowing ? <><Check size={14} /> Following</> : "Follow +"}
+          </button>
           <div className="w-px h-6 bg-slate-200"></div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full transition-colors relative z-50 cursor-pointer">
             <X size={20} />
@@ -71,33 +84,36 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                 <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                   <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Validation Engine</span>
-                    <span className="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded">1 FAILED</span>
+                    {invoice.validations?.filter(v => v.status === 'fail').length > 0 && (
+                      <span className="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded">
+                        {invoice.validations.filter(v => v.status === 'fail').length} FAILED
+                      </span>
+                    )}
                   </div>
-                  <div className="divide-y divide-slate-100">
-                    <div className="px-4 py-3 flex items-start">
-                      <CheckCircle2 size={16} className="text-green-500 mt-0.5 mr-3 shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">Vendor Verified</div>
-                        <div className="text-xs text-slate-500 mt-0.5">Matched vendor master record (ID: V-8472)</div>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 flex items-start">
-                      <CheckCircle2 size={16} className="text-green-500 mt-0.5 mr-3 shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">Duplicate Check Passed</div>
-                        <div className="text-xs text-slate-500 mt-0.5">No similar invoices found in last 90 days</div>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 flex items-start bg-red-50/50">
-                      <AlertTriangle size={16} className="text-red-500 mt-0.5 mr-3 shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-red-800">Three-Way Match Failed</div>
-                        <div className="text-xs text-red-600 mt-0.5">Missing Goods Receipt Note (GRN) for PO-2024-89</div>
-                        <button className="mt-2 text-xs font-medium text-blue-600 flex items-center hover:text-blue-800 transition-colors">
-                          <Search size={12} className="mr-1" /> Search ERP for GRN
-                        </button>
-                      </div>
-                    </div>
+                  <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                    {!invoice.validations || invoice.validations.length === 0 ? (
+                      <div className="px-4 py-4 text-center text-sm text-slate-500 italic">No validations found.</div>
+                    ) : (
+                      invoice.validations.map((v) => (
+                        <div key={v.rule_id} className={cn("px-4 py-3 flex items-start", v.status === 'fail' ? "bg-red-50/50" : "")}>
+                          {v.status === 'pass' ? (
+                            <CheckCircle2 size={16} className="text-green-500 mt-0.5 mr-3 shrink-0" />
+                          ) : v.status === 'fail' ? (
+                            <AlertTriangle size={16} className="text-red-500 mt-0.5 mr-3 shrink-0" />
+                          ) : (
+                            <AlertCircle size={16} className="text-amber-500 mt-0.5 mr-3 shrink-0" />
+                          )}
+                          <div>
+                            <div className={cn("text-sm font-medium", v.status === 'fail' ? 'text-red-800' : 'text-slate-800')}>
+                              {v.rule_id}
+                            </div>
+                            <div className={cn("text-xs mt-0.5", v.status === 'fail' ? 'text-red-600' : 'text-slate-500')}>
+                              {v.details || (v.status === 'pass' ? 'Check passed' : 'Issue detected')}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -114,16 +130,16 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                       <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
                         <span className="text-sm text-slate-500">Invoice Number</span>
                         <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.id.substring(0,8).toUpperCase()}</span>
+                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.invoice_number || invoice.id.substring(0,8).toUpperCase()}</span>
                           <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-green-500 h-full w-full"></div>
+                            <div className="bg-green-500 h-full w-[95%]"></div>
                           </div>
                         </div>
                       </div>
                       <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
                         <span className="text-sm text-slate-500">Subtotal</span>
                         <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">${invoice.subtotal?.toFixed(2)}</span>
+                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.subtotal != null ? `$${invoice.subtotal.toFixed(2)}` : 'Not Found'}</span>
                           <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="bg-green-500 h-full w-[95%]"></div>
                           </div>
@@ -132,7 +148,7 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                       <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
                         <span className="text-sm text-slate-500">Tax</span>
                         <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">${invoice.tax_amount?.toFixed(2)}</span>
+                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.tax_amount != null ? `$${invoice.tax_amount.toFixed(2)}` : 'Not Found'}</span>
                           <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="bg-green-500 h-full w-[90%]"></div>
                           </div>
@@ -141,7 +157,7 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                       <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
                         <span className="text-sm font-medium text-slate-700">Total</span>
                         <div className="flex items-center">
-                          <span className="text-base font-bold text-slate-900 mr-2">${invoice.grand_total?.toFixed(2)}</span>
+                          <span className="text-base font-bold text-slate-900 mr-2">{invoice.grand_total != null ? `$${invoice.grand_total.toFixed(2)}` : 'Not Found'}</span>
                           <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="bg-green-500 h-full w-[98%]"></div>
                           </div>
@@ -154,16 +170,67 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
 
               {/* Action Hub */}
               <div className="p-4 mt-auto">
-                <ActionHub invoiceId={invoice.id} onActionComplete={() => { onRefresh(); onClose(); }} />
+                <ActionHub invoice={invoice} onActionComplete={() => { onRefresh(); onClose(); }} />
               </div>
             </div>
           </>
+        ) : activeTab === "Timeline" ? (
+          <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
+            <div className="max-w-2xl mx-auto">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Processing Timeline</h3>
+              
+              {!invoice.timeline || invoice.timeline.length === 0 ? (
+                <div className="text-sm text-slate-500 italic">No timeline events available.</div>
+              ) : (
+                <div className="relative border-l-2 border-slate-200 ml-3 space-y-8">
+                  {invoice.timeline.map((event, idx) => (
+                    <div key={event.id} className="relative pl-8">
+                      {/* Timeline Dot */}
+                      <div className={cn(
+                        "absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white",
+                        event.status === 'completed' || event.status === 'ai_completed' ? "bg-green-500" :
+                        event.status === 'failed' ? "bg-red-500" : "bg-blue-500"
+                      )}></div>
+                      
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-bold text-slate-800 capitalize">{event.stage}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(event.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-600 mb-2">{event.details || 'Processing stage completed.'}</div>
+                        
+                        {(event.confidence !== null || event.duration_ms !== null) && (
+                          <div className="flex space-x-4 mt-1">
+                            {event.confidence !== null && (
+                              <div className="flex items-center text-xs font-medium text-slate-500">
+                                <Check size={14} className="mr-1 text-green-500" />
+                                Conf: {Math.round(event.confidence)}%
+                              </div>
+                            )}
+                            {event.duration_ms !== null && (
+                              <div className="flex items-center text-xs font-medium text-slate-500">
+                                <Clock size={14} className="mr-1 text-slate-400" />
+                                {event.duration_ms}ms
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
-          <div className="p-8 text-center text-slate-500">
+          <div className="p-8 text-center text-slate-500 flex-1 bg-slate-50 flex items-center justify-center">
             {activeTab} Content Placeholder
           </div>
         )}
       </div>
     </div>
+    </>
   );
 }

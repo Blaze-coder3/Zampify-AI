@@ -18,6 +18,8 @@ class Invoice(Base):
     tracking_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True, index=True)
     vendor_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("vendors.id"), nullable=True, index=True)
     matched_po_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("purchase_orders.id"), nullable=True)
+    assignee_id: Mapped[Optional[str]] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    tags: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
 
     # Processing Status (State Machine)
     status: Mapped[str] = mapped_column(String, default="received", index=True)

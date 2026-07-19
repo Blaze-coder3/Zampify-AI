@@ -36,33 +36,33 @@ CRITICAL RULES:
 5. All monetary values must be numbers (float) with 2 decimal places
 6. Currency must be 3-letter ISO 4217 code (USD, EUR, GBP, AED, PKR, etc.)
 7. Return ONLY valid JSON. No markdown, no explanation text.
-8. Provide bounding box coordinates [x_min, y_min, x_max, y_max] for all fields. If unknown, return [0,0,0,0].
+8. Provide bounding box coordinates [x_min, y_min, x_max, y_max] for all fields in the `bbox` key. If unknown, return [0,0,0,0].
 
 OUTPUT SCHEMA (return exactly this structure):
 {
-  "invoice_number": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "invoice_date": {"value": "<YYYY-MM-DD or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "due_date": {"value": "<YYYY-MM-DD or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "vendor_name": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "vendor_address": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "bank_account_number": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "routing_number": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "currency": {"value": "<3-letter code or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "po_number": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
+  "invoice_number": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "invoice_date": {"value": "<YYYY-MM-DD or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "due_date": {"value": "<YYYY-MM-DD or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "vendor_name": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "vendor_address": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "bank_account_number": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "routing_number": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "currency": {"value": "<3-letter code or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "po_number": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
   "line_items": [
     {
-      "description": {"value": "<string>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-      "quantity": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-      "unit_price": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-      "total": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]}
+      "description": {"value": "<string>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+      "quantity": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+      "unit_price": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+      "total": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]}
     }
   ],
-  "subtotal": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "tax_amount": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "tax_rate": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "shipping": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "grand_total": {"value": <float or null>, "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
-  "payment_terms": {"value": "<string or null>", "confidence": <0-100>, "bounding_box": [<int>,<int>,<int>,<int>]},
+  "subtotal": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "tax_amount": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "tax_rate": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "shipping": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "grand_total": {"value": <float or null>, "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
+  "payment_terms": {"value": "<string or null>", "confidence": <0-100>, "bbox": [<int>,<int>,<int>,<int>]},
   "line_items_bundled": <true if only 1 generic line item, false otherwise>
 }"""
 
@@ -71,6 +71,7 @@ OUTPUT SCHEMA (return exactly this structure):
 class ExtractionAgentResult:
     extracted_data: dict
     field_confidences: dict
+    bounding_boxes: dict
     extraction_confidence: float  # Mean of all field confidence scores
     line_items_bundled: bool = False
     raw_response: str = ""
@@ -116,6 +117,34 @@ def _compute_extraction_confidence(extracted: dict) -> tuple[dict, float]:
     mean_confidence = sum(scores) / len(scores) if scores else 0.0
     return confidences, round(mean_confidence, 2)
 
+def _extract_bounding_boxes(extracted: dict) -> dict:
+    bboxes = {}
+    scalar_fields = [
+        "invoice_number", "invoice_date", "due_date", "vendor_name",
+        "vendor_address", "bank_account_number", "routing_number",
+        "currency", "po_number", "subtotal",
+        "tax_amount", "tax_rate", "shipping", "grand_total", "payment_terms"
+    ]
+    for f in scalar_fields:
+        if f in extracted and isinstance(extracted[f], dict):
+            bboxes[f] = extracted[f].get("bbox", [0,0,0,0])
+            
+    # Line items
+    li_boxes = []
+    for li in extracted.get("line_items", []):
+        if isinstance(li, dict):
+            li_b = {
+                k: li[k].get("bbox", [0,0,0,0]) if isinstance(li[k], dict) else [0,0,0,0]
+                for k in ["description", "quantity", "unit_price", "total"]
+                if k in li
+            }
+            li_boxes.append(li_b)
+    if li_boxes:
+        bboxes["line_items"] = li_boxes
+        
+    return bboxes
+
+
 
 async def extract_invoice_data(raw_text: str, invoice_id: str) -> ExtractionAgentResult:
     """
@@ -160,6 +189,7 @@ async def extract_invoice_data(raw_text: str, invoice_id: str) -> ExtractionAgen
 
         extracted = json.loads(json_text)
         field_confidences, extraction_confidence = _compute_extraction_confidence(extracted)
+        bounding_boxes = _extract_bounding_boxes(extracted)
         line_items_bundled = extracted.get("line_items_bundled", False)
 
         logger.info(
@@ -172,6 +202,7 @@ async def extract_invoice_data(raw_text: str, invoice_id: str) -> ExtractionAgen
         return ExtractionAgentResult(
             extracted_data=extracted,
             field_confidences=field_confidences,
+            bounding_boxes=bounding_boxes,
             extraction_confidence=extraction_confidence,
             line_items_bundled=line_items_bundled,
             raw_response=raw_response,
