@@ -21,7 +21,6 @@ export default function TopNav() {
 
   const roleLabels: Record<Role, string> = {
     specialist: "AP Specialist",
-    manager: "AP Manager",
     admin: "System Administrator"
   };
 

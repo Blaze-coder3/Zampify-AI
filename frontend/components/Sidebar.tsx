@@ -57,22 +57,7 @@ export default function Sidebar({
     </div>
   );
 
-  const renderManagerNav = () => (
-    <div className="p-3">
-      <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2 px-2 mt-2">Manager</div>
-      <nav className="space-y-1">
-        <Link href="/overview" className={cn("flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors", pathname === '/overview' ? "bg-blue-600 text-white font-medium" : "hover:bg-white/5")}>
-          <div className="flex items-center gap-3"><PieChart className="w-4 h-4" /> Overview Dashboard</div>
-        </Link>
-        <Link href="/bottlenecks" className={cn("flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors", pathname === '/bottlenecks' ? "bg-blue-600 text-white font-medium" : "hover:bg-white/5")}>
-          <div className="flex items-center gap-3"><Activity className="w-4 h-4" /> Bottleneck Heatmap</div>
-        </Link>
-        <Link href="/financial" className={cn("flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors", pathname === '/financial' ? "bg-blue-600 text-white font-medium" : "hover:bg-white/5")}>
-          <div className="flex items-center gap-3"><DollarSign className="w-4 h-4" /> Financial Snapshot</div>
-        </Link>
-      </nav>
-    </div>
-  );
+
 
   const renderAdminNav = () => (
     <div className="p-3">
@@ -105,13 +90,12 @@ export default function Sidebar({
       </div>
 
       {user.role === 'specialist' && renderSpecialistNav()}
-      {user.role === 'manager' && renderManagerNav()}
       {user.role === 'admin' && renderAdminNav()}
 
-        {['specialist', 'manager', 'admin'].includes(user.role) && (
+        {['specialist', 'admin'].includes(user.role) && (
           <>
             <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2 px-2 mt-6" title={user.role === 'admin' ? 'Admin Comm Center' : 'Shared AP Team Mailbox'}>
-              {user.role === 'specialist' ? 'Communication Center' : user.role === 'manager' ? 'Team Communication Center' : 'System Alerts'}
+              {user.role === 'specialist' ? 'Communication Center' : 'System Alerts'}
             </div>
             <nav className="space-y-1">
               {(user.role === 'specialist' ? [
@@ -119,11 +103,6 @@ export default function Sidebar({
                 { id: 'VendorInvoices', icon: FileText, label: 'Vendor Invoices' },
                 { id: 'VendorQueries', icon: MessageSquare, label: 'Vendor Queries' },
                 { id: 'Exceptions', icon: AlertTriangle, label: 'Exceptions', color: 'text-red-400' },
-              ] : user.role === 'manager' ? [
-                { id: 'TeamInbox', icon: Inbox, label: 'Team Inbox' },
-                { id: 'VendorEscalations', icon: AlertTriangle, label: 'Vendor Escalations', color: 'text-red-400' },
-                { id: 'Announcements', icon: Bell, label: 'Manager Announcements' },
-                { id: 'TeamMessages', icon: MessageSquare, label: 'Team Messages' },
               ] : [
                 { id: 'SupportRequests', icon: MessageSquare, label: 'Support Requests' },
                 { id: 'SystemAlerts', icon: AlertTriangle, label: 'System Alerts', color: 'text-red-400' },
@@ -142,8 +121,8 @@ export default function Sidebar({
               ))}
             </nav>
 
-            {/* Filters only for Specialist & Manager */}
-            {(user.role === 'specialist' || user.role === 'manager') && (
+            {/* Filters only for Specialist */}
+            {(user.role === 'specialist') && (
               <>
                 <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2 px-2 mt-6 flex justify-between items-center">
                   <span>Filters</span>

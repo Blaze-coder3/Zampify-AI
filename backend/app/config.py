@@ -31,11 +31,13 @@ class Settings(BaseSettings):
     # Policy
     POLICY_FILE: str = "./app/policies/policies.yaml"
     
-    # Email Ingestion
+    # Email Ingestion & Sending
     IMAP_SERVER: str = "imap.gmail.com"
     IMAP_PORT: int = 993
     IMAP_USERNAME: str = ""
     IMAP_PASSWORD: str = ""
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
 
     # Processing Thresholds
     OCR_CONFIDENCE_THRESHOLD: float = 80.0

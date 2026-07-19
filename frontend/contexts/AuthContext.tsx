@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-export type Role = "specialist" | "manager" | "admin";
+export type Role = "specialist" | "admin";
 
 export interface User {
   name: string;
@@ -19,12 +19,7 @@ export const USERS: Record<Role, User> = {
     role: "specialist",
     initials: "PS"
   },
-  manager: {
-    name: "Rahul Singh",
-    email: "rahul@acmemfg.com",
-    role: "manager",
-    initials: "RS"
-  },
+
   admin: {
     name: "Arjun Mehta",
     email: "admin@acmemfg.com",

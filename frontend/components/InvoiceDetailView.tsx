@@ -28,26 +28,21 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
           <div>
             <h2 className="text-lg font-bold text-slate-800">
               {invoice.vendor_name || 'Unknown Vendor'} 
-              <span className="text-slate-400 font-normal ml-2">#{invoice.id.substring(0,8).toUpperCase()}</span>
+              <span className="text-slate-400 font-normal ml-2">#{invoice.invoice_number || invoice.id}</span>
             </h2>
           </div>
-          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full border border-red-200">
-            High Risk
+          <span className={cn("px-2.5 py-1 text-xs font-semibold rounded-full border", 
+            invoice.priority === 'High' ? "bg-red-100 text-red-700 border-red-200" : 
+            invoice.priority === 'Medium' ? "bg-amber-100 text-amber-700 border-amber-200" : 
+            "bg-emerald-100 text-emerald-700 border-emerald-200"
+          )}>
+            {invoice.priority || 'Medium'} Priority
           </span>
           <div className="text-sm font-bold text-slate-700 ml-4">
             ${invoice.grand_total ? invoice.grand_total.toLocaleString('en-US', {minimumFractionDigits:2}) : '0.00'}
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <button 
-            onClick={() => setIsFollowing(!isFollowing)}
-            className={cn("text-sm font-medium transition-colors flex items-center gap-1.5", 
-              isFollowing ? "text-slate-600 hover:text-slate-800" : "text-blue-600 hover:text-blue-800"
-            )}
-          >
-            {isFollowing ? <><Check size={14} /> Following</> : "Follow +"}
-          </button>
-          <div className="w-px h-6 bg-slate-200"></div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-full transition-colors relative z-50 cursor-pointer">
             <X size={20} />
           </button>
@@ -57,7 +52,7 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
       {/* Tabs */}
       <div className="bg-white px-6 border-b border-slate-200 shrink-0">
         <div className="flex space-x-8">
-          {["Invoice View", "AI Interpretation", "Timeline", "History"].map(tab => (
+          {["Invoice View", "AI Interpretation", "Timeline"].map(tab => (
             <button 
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -94,8 +89,8 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                     {!invoice.validations || invoice.validations.length === 0 ? (
                       <div className="px-4 py-4 text-center text-sm text-slate-500 italic">No validations found.</div>
                     ) : (
-                      invoice.validations.map((v) => (
-                        <div key={v.rule_id} className={cn("px-4 py-3 flex items-start", v.status === 'fail' ? "bg-red-50/50" : "")}>
+                      invoice.validations.map((v, index) => (
+                        <div key={`${v.rule_id}-${index}`} className={cn("px-4 py-3 flex items-start", v.status === 'fail' ? "bg-red-50/50" : "")}>
                           {v.status === 'pass' ? (
                             <CheckCircle2 size={16} className="text-green-500 mt-0.5 mr-3 shrink-0" />
                           ) : v.status === 'fail' ? (
@@ -119,52 +114,42 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
 
                 {/* AI Interpretation */}
                 {activeTab === "AI Interpretation" && (
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-                      <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Extracted Data</span>
-                      <div className="flex items-center text-[10px] text-slate-500">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span> {Math.round((invoice.overall_confidence || 0) * 100)}% Conf
+                  <>
+                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Extracted Data</span>
+                        <div className="flex items-center text-[10px] text-slate-500">
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span> {Math.round((invoice.overall_confidence || 0) * 100)}% Conf
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        {Object.entries(invoice.raw_extracted_data || {}).filter(([k]) => k !== 'line_items').map(([key, val]) => {
+                           const confPct = invoice.field_confidences?.[key] ? Math.round(invoice.field_confidences[key] * 100) : 95;
+                           let displayVal = String(val);
+                           if (val && typeof val === 'object' && 'value' in val) {
+                               displayVal = String((val as any).value);
+                           }
+                           return (
+                            <div key={key} className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
+                              <span className="text-sm text-slate-500 capitalize">{key.replace(/_/g, ' ')}</span>
+                              <div className="flex items-center">
+                                <span className="text-sm font-medium text-slate-800 mr-2">{displayVal}</span>
+                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={cn("h-full", confPct >= 90 ? "bg-emerald-500" : confPct >= 70 ? "bg-amber-500" : "bg-red-500")} style={{width: `${confPct}%`}}></div>
+                                </div>
+                              </div>
+                            </div>
+                           );
+                        })}
                       </div>
                     </div>
-                    <div className="p-4 space-y-3">
-                      <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
-                        <span className="text-sm text-slate-500">Invoice Number</span>
-                        <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.invoice_number || invoice.id.substring(0,8).toUpperCase()}</span>
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-green-500 h-full w-[95%]"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
-                        <span className="text-sm text-slate-500">Subtotal</span>
-                        <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.subtotal != null ? `$${invoice.subtotal.toFixed(2)}` : 'Not Found'}</span>
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-green-500 h-full w-[95%]"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
-                        <span className="text-sm text-slate-500">Tax</span>
-                        <div className="flex items-center">
-                          <span className="text-sm font-medium text-slate-800 mr-2">{invoice.tax_amount != null ? `$${invoice.tax_amount.toFixed(2)}` : 'Not Found'}</span>
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-green-500 h-full w-[90%]"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between items-center group cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors">
-                        <span className="text-sm font-medium text-slate-700">Total</span>
-                        <div className="flex items-center">
-                          <span className="text-base font-bold text-slate-900 mr-2">{invoice.grand_total != null ? `$${invoice.grand_total.toFixed(2)}` : 'Not Found'}</span>
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-green-500 h-full w-[98%]"></div>
-                          </div>
-                        </div>
-                      </div>
+                    
+                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden p-4 mt-4">
+                       <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">AI Recommendation</h4>
+                       <div className="text-sm font-bold text-slate-800">{invoice.ai_recommendation || invoice.status}</div>
+                       <p className="text-xs text-slate-500 mt-1">{invoice.decision_explanation || 'No explanation provided.'}</p>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
 
@@ -194,7 +179,7 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                       
                       <div className="flex flex-col">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-bold text-slate-800 capitalize">{event.stage}</span>
+                          <span className="text-sm font-bold text-slate-800 capitalize">{event.stage.replace(/_/g, ' ')}</span>
                           <span className="text-xs text-slate-500">
                             {new Date(event.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}
                           </span>

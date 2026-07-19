@@ -44,7 +44,7 @@ export default function ActivityFeed({ invoices = [] }: ActivityFeedProps) {
 
       return {
         text,
-        id: inv.invoice_number || inv.id.substring(0, 8).toUpperCase(),
+        id: inv.invoice_number || inv.id,
         time,
         icon
       };

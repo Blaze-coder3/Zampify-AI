@@ -24,3 +24,12 @@ fraud_detection:
   velocity_max_invoices: 3           # Max invoices from same vendor in window
   amount_just_below_threshold: true  # Flag amounts just under approval limit
   threshold_skirting_range_pct: 5.0  # Flag if amount is within 5% below auto-approval limit
+
+attachment_policy:
+  max_file_size_mb: 25
+  warning_threshold_mb: 10
+  max_pages: 20
+  max_attachments_per_email: 10
+  allowed_types: [pdf]
+  reject_password_protected: true
+  reject_encrypted: true

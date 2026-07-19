@@ -77,8 +77,9 @@ def validate_vendor(extracted_vendor_name: Optional[str], vendor_db_record) -> R
             confidence_contribution=0.0,
         )
 
-    match_score = fuzz.token_sort_ratio(
-        extracted_vendor_name.upper(), vendor_db_record.name.upper()
+    match_score = max(
+        fuzz.token_sort_ratio(extracted_vendor_name.upper(), vendor_db_record.name.upper()),
+        fuzz.token_set_ratio(extracted_vendor_name.upper(), vendor_db_record.name.upper())
     )
     confidence = float(match_score)
 
@@ -282,6 +283,16 @@ def validate_line_items(extracted_data: dict) -> RuleResult:
     line_items = extracted_data.get("line_items", [])
     subtotal = extracted_data.get("subtotal", {})
     subtotal_val = subtotal.get("value") if isinstance(subtotal, dict) else None
+    
+    is_bundled = extracted_data.get("line_items_bundled", False)
+    if is_bundled:
+        return RuleResult(
+            rule_id="BR-005", rule_name="Line Item Integrity",
+            status="warning", severity="warning",
+            reason="Line items bundled — cannot verify individual pricing",
+            details={"bundled": True},
+            confidence_contribution=70.0,
+        )
 
     if not line_items or subtotal_val is None:
         return RuleResult(
@@ -562,11 +573,22 @@ def run_all_validations(
     tolerance_pct = policy.get("company_policy", {}).get("tolerance_percentage", 2.0)
     duplicate_window = policy.get("company_policy", {}).get("duplicate_window_days", 90)
 
+    invoice_subtotal_data = extracted.get("subtotal", {})
+    invoice_subtotal = invoice_subtotal_data.get("value") if isinstance(invoice_subtotal_data, dict) else None
+
+    # Handle pre-tax/post-tax PO matching by selecting the amount with the smallest variance
+    compare_amount = invoice_total
+    if invoice_subtotal is not None and po_record is not None:
+        subtotal_diff = abs(invoice_subtotal - po_record.total_amount)
+        total_diff = abs(invoice_total - po_record.total_amount) if invoice_total is not None else float('inf')
+        if subtotal_diff < total_diff:
+            compare_amount = invoice_subtotal
+
     # Run all rules
     results.append(validate_vendor(invoice_vendor_name, vendor_record))
     results.extend(validate_po_match(
         extracted.get("po_number", {}).get("value"),
-        invoice_total,
+        compare_amount,
         po_record,
         tolerance_pct,
     ))
@@ -575,7 +597,7 @@ def run_all_validations(
     if po_record:
         results.append(validate_currency(invoice_currency, po_record.currency))
         results.append(validate_split_invoice(
-            invoice_total,
+            compare_amount,
             po_record.total_amount,
             po_record.fulfilled_amount,
         ))

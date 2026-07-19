@@ -23,14 +23,17 @@ function MiniAreaChart({
   const width = 300;
   const height = 120;
   
-  const dx = width / (data.length - 1);
+  const dx = data && data.length > 1 ? width / (data.length - 1) : 0;
 
-  const pathD = data.map((val, i) => {
-    const y = height - (val / maxVal) * height;
+  const pathD = data && data.length > 0 ? data.map((val, i) => {
+    const y = maxVal ? height - (val / maxVal) * height : height;
     return `${i === 0 ? 'M' : 'L'} ${i * dx} ${y}`;
-  }).join(' ');
+  }).join(' ') : `M 0 ${height}`;
 
   const areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
+
+  const lastVal = data && data.length > 0 ? data[data.length - 1] : 0;
+  const cy = maxVal ? height - (lastVal / maxVal) * height : height;
 
   return (
     <div className="flex flex-col border border-slate-200 bg-white rounded-xl shadow-sm p-4">
@@ -70,7 +73,9 @@ function MiniAreaChart({
             <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             
             {/* Last point dot */}
-            <circle cx={width} cy={height - (data[data.length - 1] / maxVal) * height} r="3" fill={color} className="shadow-sm" />
+            {data && data.length > 0 && !isNaN(cy) && (
+              <circle cx={width} cy={cy} r="3" fill={color} className="shadow-sm" />
+            )}
           </svg>
         </div>
       </div>

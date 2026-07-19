@@ -223,14 +223,36 @@ async def process_invoice(ctx, invoice_id: str):
             po_number_data = extracted.get("po_number", {})
             po_number = po_number_data.get("value") if isinstance(po_number_data, dict) else None
 
-            # Vendor lookup (fuzzy match done in validation engine)
+            # Vendor lookup
             vendor_record = None
             if vendor_name:
-                # Try exact match first
+                # Try exact or substring match first
                 res = await db.execute(
                     select(Vendor).where(Vendor.name.ilike(f"%{vendor_name}%"))
                 )
-                vendor_record = res.scalar_one_or_none()
+                vendor_records = res.scalars().all()
+                if len(vendor_records) == 1:
+                    vendor_record = vendor_records[0]
+                elif len(vendor_records) > 1:
+                    exact_matches = [v for v in vendor_records if v.name.lower() == vendor_name.lower()]
+                    if exact_matches:
+                        vendor_record = exact_matches[0]
+                
+                if not vendor_record:
+                    # Fallback: Query all vendors and check token set ratio
+                    res = await db.execute(select(Vendor))
+                    all_vendors = res.scalars().all()
+                    from thefuzz import fuzz
+                    best_vendor = None
+                    best_score = 0
+                    for v in all_vendors:
+                        score = fuzz.token_set_ratio(vendor_name.upper(), v.name.upper())
+                        if score > best_score:
+                            best_score = score
+                            best_vendor = v
+                    if best_score >= 80:
+                        vendor_record = best_vendor
+                
                 if vendor_record:
                     await _update_invoice_status(db, invoice_id, "extracted", vendor_id=vendor_record.id)
 

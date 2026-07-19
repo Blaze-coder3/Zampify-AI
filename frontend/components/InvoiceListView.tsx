@@ -131,7 +131,7 @@ export default function InvoiceListView({ invoices, selectedInvoiceId, onSelectI
                         selectedInvoiceId === inv.id ? "bg-blue-50/80 border-l-2 border-blue-500" : "border-l-2 border-transparent"
                       )}
                     >
-                      <td className="px-4 py-3 font-medium text-slate-700">{inv.id.substring(0,8).toUpperCase()}</td>
+                      <td className="px-4 py-3 font-medium text-slate-700">{inv.id}</td>
                       <td className="px-4 py-3 text-slate-600">{inv.vendor_name || "Unknown"}</td>
                       <td className="px-4 py-3 text-right text-slate-700 font-medium">
                         ${inv.grand_total ? inv.grand_total.toLocaleString('en-US', {minimumFractionDigits: 2}) : "0.00"}

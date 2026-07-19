@@ -33,14 +33,40 @@ export default function ArchiveTable({
   invoices,
   searchQuery,
   onSearchChange,
+  activeTab = "All Documents",
+  dateFilter = "",
   onSelectInvoice
 }: { 
   invoices: InvoiceSummary[],
   searchQuery?: string,
   onSearchChange?: (q: string) => void,
+  activeTab?: string,
+  dateFilter?: string,
   onSelectInvoice?: (inv: InvoiceSummary) => void
 }) {
   let filteredInvoices = invoices;
+  
+  if (activeTab !== "All Documents") {
+    // Basic mapping for Document Types based on tabs
+    let typeFilter = activeTab.toLowerCase();
+    if (typeFilter === "purchase orders") typeFilter = "purchase order";
+    if (typeFilter === "vendor emails") typeFilter = "email";
+    
+    // We assume document_type will match one of these (invoice, purchase order, credit note, email, etc.)
+    if (typeFilter === "deleted") {
+       filteredInvoices = []; // Not implemented yet
+    } else {
+       filteredInvoices = filteredInvoices.filter(i => (i.document_type || "invoice").toLowerCase() === typeFilter);
+    }
+  }
+
+  if (dateFilter) {
+    filteredInvoices = filteredInvoices.filter(i => {
+      const dt = new Date(i.received_at || Date.now()).toISOString().split('T')[0];
+      return dt === dateFilter;
+    });
+  }
+
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     filteredInvoices = filteredInvoices.filter(i => 
@@ -53,11 +79,11 @@ export default function ArchiveTable({
   const rows = filteredInvoices.map((inv) => {
     return {
       original: inv,
-      id: inv.invoice_number || inv.id.substring(0, 8),
+      id: inv.invoice_number || inv.id,
       vendor: inv.vendor_name || "Unknown",
       date: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       amount: inv.grand_total ? `$${inv.grand_total.toLocaleString(undefined, {minimumFractionDigits: 2})}` : "$0.00",
-      type: "Invoice",
+      type: inv.document_type ? (inv.document_type.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")) : "Invoice",
       status: inv.status,
       poNumber: "-", // Would map to PO if available in summary
       dueDate: "-",  // Would map to due date if available in summary
@@ -66,8 +92,8 @@ export default function ArchiveTable({
   });
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="overflow-x-auto flex-1">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[1100px]">
           <thead>
             <tr className="border-b border-slate-200">

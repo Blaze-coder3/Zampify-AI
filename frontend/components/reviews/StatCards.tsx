@@ -48,13 +48,13 @@ export default function StatCards({
   onSelectTab: (tab: string) => void 
 }) {
   // Extract values from analytics, or default to mockup values if not loaded
-  const needsReview = analytics?.status_distribution?.["needs_review"] ?? 0;
-  const dueToday = analytics?.status_distribution?.["due_today"] ?? 0;
-  const overdue = analytics?.status_distribution?.["overdue"] ?? 0;
-  const slaCompliance = "100%"; // Ideally calculate from analytics.sla_compliance
-  const avgReviewTime = "0 hrs";
+  const needsReview = analytics?.review_summary?.needs_review ?? 0;
+  const dueToday = analytics?.review_summary?.due_today ?? 0;
+  const overdue = analytics?.review_summary?.overdue ?? 0;
+  const slaCompliance = analytics?.kpis?.sla_compliance ?? "100%";
+  const avgReviewTime = analytics?.kpis?.avg_time ?? "0 hrs";
 
-  const assignedToMe = needsReview + dueToday + overdue + (analytics?.status_distribution?.["escalated"] ?? 0);
+  const assignedToMe = needsReview + dueToday + overdue + (analytics?.review_summary?.escalated ?? 0);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

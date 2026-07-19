@@ -12,9 +12,21 @@ const TABS = [
   "Deleted"
 ];
 
-export default function ArchiveSearchTabs({ searchQuery, onSearchChange }: { searchQuery: string, onSearchChange: (q: string) => void }) {
-  const [activeTab, setActiveTab] = useState("All Documents");
-
+export default function ArchiveSearchTabs({ 
+  searchQuery, 
+  onSearchChange,
+  activeTab,
+  onTabChange,
+  dateFilter,
+  onDateFilterChange
+}: { 
+  searchQuery: string, 
+  onSearchChange: (q: string) => void,
+  activeTab: string,
+  onTabChange: (t: string) => void,
+  dateFilter: string,
+  onDateFilterChange: (d: string) => void
+}) {
   return (
     <div className="flex flex-col mb-4">
       {/* Search and Date Row */}
@@ -31,17 +43,26 @@ export default function ArchiveSearchTabs({ searchQuery, onSearchChange }: { sea
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-lg shadow-sm text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors w-[260px] justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar size={16} className="text-slate-400" />
-              <span>15 May 2024 – 21 May 2025</span>
-            </div>
-            <Trash2 size={14} className="text-slate-300 hover:text-slate-500" />
-          </div>
+          <input 
+            type="date"
+            value={dateFilter}
+            onChange={(e) => onDateFilterChange(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-slate-200 rounded-lg shadow-sm text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            title="Filter by Invoice Date"
+          />
           
-          <button className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline px-2 whitespace-nowrap">
-            Clear All
-          </button>
+          {(searchQuery || dateFilter || activeTab !== "All Documents") && (
+            <button 
+              onClick={() => {
+                onSearchChange("");
+                onDateFilterChange("");
+                onTabChange("All Documents");
+              }}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline px-2 whitespace-nowrap"
+            >
+              Clear All
+            </button>
+          )}
         </div>
       </div>
 
@@ -50,7 +71,7 @@ export default function ArchiveSearchTabs({ searchQuery, onSearchChange }: { sea
         {TABS.map(tab => (
           <div 
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onTabChange(tab)}
             className={cn(
               "px-4 py-3 text-sm font-semibold cursor-pointer whitespace-nowrap transition-colors border-b-2",
               activeTab === tab 

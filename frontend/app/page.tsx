@@ -4,19 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { listInvoices, getInvoice, InvoiceSummary, InvoiceDetail, listCommunicationCases, CommunicationCase, DashboardStats } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
 import InvoiceDetailView from "@/components/InvoiceDetailView";
 
-// New Workspace Components
 import TodaysWorkHeader from "@/components/workspace/TodaysWorkHeader";
 import QuickActionCards from "@/components/workspace/QuickActionCards";
 import SmartWorkQueue from "@/components/workspace/SmartWorkQueue";
-import TodaysPipeline from "@/components/workspace/TodaysPipeline";
-import ActivityFeed from "@/components/workspace/ActivityFeed";
-import MyPerformance from "@/components/workspace/MyPerformance";
 import ComposeModal from "@/components/workspace/ComposeModal";
 import CommunicationDetailView from "@/components/workspace/CommunicationDetailView";
+
+import OverviewDashboard from "@/components/overview/OverviewDashboard";
+import BottlenecksDashboard from "@/components/bottlenecks/BottlenecksDashboard";
+import FinancialDashboard from "@/components/financial/FinancialDashboard";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<any>(null);
   const [pipeline, setPipeline] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("workspace");
   const [activeFilter, setActiveFilter] = useState<any>(null);
   const [activeFolder, setActiveFolder] = useState<string>("VendorInvoices");
   const [activeFilters, setActiveFilters] = useState<string[]>(["assigned_to_me"]);
@@ -40,7 +42,6 @@ export default function Dashboard() {
       if (!token) { router.push("/login"); return; }
 
       // Route protection
-      if (user.role === 'manager') { router.push('/overview'); return; }
       if (user.role === 'admin') { router.push('/system'); return; }
       
       const casesRes = await listCommunicationCases(activeFolder, activeFilters);
@@ -56,11 +57,24 @@ export default function Dashboard() {
         setInvoices([]);
       }
 
+      const duplicates = invs.filter(i => {
+        if (i.triggered_rules && Array.isArray(i.triggered_rules)) {
+          return i.triggered_rules.some((r: any) => r.rule_id === 'BR-004' && r.status !== 'pass');
+        }
+        return false;
+      }).length;
+      
+      const readyToApprove = invs.filter(i => i.status === 'needs_review' && i.overall_confidence && i.overall_confidence >= 80).length;
+
       // Compute stats locally instead of broken API calls
       setStats({
         needs_review: invs.filter(i => i.status === 'needs_review' || i.decision === 'investigating').length,
-        waiting_on_vendor: casesRes.data.filter(c => c.status === 'Pending Vendor').length,
-        due_within_2h: invs.filter(i => i.priority === 'High' && (i.status === 'needs_review' || i.decision === 'investigating')).length
+        waiting_on_vendor: casesRes.data.filter(c => c.status === 'Pending Vendor').length + invs.filter(i => i.status === 'triage').length,
+        due_within_2h: invs.filter(i => i.priority === 'High' && (i.status === 'needs_review' || i.decision === 'investigating')).length,
+        duplicates_detected: duplicates,
+        ready_to_approve: readyToApprove,
+        total_invoices: invs.length,
+        failed: invs.filter(i => i.status === 'failed').length
       });
 
       setPipeline({
@@ -196,39 +210,69 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNav />
         
+        {/* Tab Navigation */}
+        <div className="bg-white border-b border-slate-200 px-8 pt-4 flex-shrink-0">
+          <nav className="flex space-x-8 text-sm font-medium">
+            <button 
+              onClick={() => setActiveTab('workspace')} 
+              className={cn("pb-3 border-b-2 transition-colors", activeTab === 'workspace' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800')}
+            >
+              Workspace
+            </button>
+            <button 
+              onClick={() => setActiveTab('overview')} 
+              className={cn("pb-3 border-b-2 transition-colors", activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800')}
+            >
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab('bottlenecks')} 
+              className={cn("pb-3 border-b-2 transition-colors", activeTab === 'bottlenecks' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800')}
+            >
+              Bottlenecks
+            </button>
+            <button 
+              onClick={() => setActiveTab('financial')} 
+              className={cn("pb-3 border-b-2 transition-colors", activeTab === 'financial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800')}
+            >
+              Financial Snapshot
+            </button>
+          </nav>
+        </div>
+
         <div className="flex-1 flex overflow-hidden relative">
           <main className="flex-1 p-6 overflow-y-auto min-w-0">
-            <div className="max-w-[1200px] mx-auto">
-              <TodaysWorkHeader 
-                onRefresh={load} 
-                onStartProcessing={handleStartProcessing} 
-                onResumeLastCase={handleResumeLastCase}
-                stats={stats}
-              />
-              
-              <QuickActionCards onFilter={handleFilter} invoices={invoices} stats={stats} />
-              
-              <div className="mb-6">
-                 <SmartWorkQueue 
-                   cases={cases}
-                   invoices={invoices} 
-                   activeFolder={activeFolder}
-                   selectedInvoiceId={selectedInvoice?.id} 
-                   selectedCaseId={selectedCase?.id}
-                   onSelectInvoice={handleSelectInvoice}
-                   onSelectCase={handleSelectCase}
-                   onRefresh={load}
-                   activeFilter={activeFilter}
-                   activeFilters={activeFilters}
-                 />
+            {activeTab === 'workspace' && (
+              <div className="max-w-[1200px] mx-auto">
+                <TodaysWorkHeader 
+                  onRefresh={load} 
+                  onStartProcessing={handleStartProcessing} 
+                  onResumeLastCase={handleResumeLastCase}
+                  stats={stats}
+                />
+                
+                <QuickActionCards onFilter={handleFilter} invoices={invoices} stats={stats} />
+                
+                <div className="mb-6">
+                   <SmartWorkQueue 
+                     cases={cases}
+                     invoices={invoices} 
+                     activeFolder={activeFolder}
+                     selectedInvoiceId={selectedInvoice?.id} 
+                     selectedCaseId={selectedCase?.id}
+                     onSelectInvoice={handleSelectInvoice}
+                     onSelectCase={handleSelectCase}
+                     onRefresh={load}
+                     activeFilter={activeFilter}
+                     activeFilters={activeFilters}
+                   />
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 pb-12">
-                 <TodaysPipeline pipeline={pipeline} />
-                 <ActivityFeed invoices={invoices} />
-                 <MyPerformance stats={stats} />
-              </div>
-            </div>
+            {activeTab === 'overview' && <OverviewDashboard />}
+            {activeTab === 'bottlenecks' && <BottlenecksDashboard />}
+            {activeTab === 'financial' && <FinancialDashboard />}
           </main>
 
           {selectedInvoice && (

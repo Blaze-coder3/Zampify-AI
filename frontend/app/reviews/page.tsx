@@ -8,7 +8,6 @@ import Sidebar from "@/components/Sidebar";
 import ReviewsHeader from "@/components/reviews/ReviewsHeader";
 import StatCards from "@/components/reviews/StatCards";
 import ReviewsTable from "@/components/reviews/ReviewsTable";
-import RightAnalyticsPanel from "@/components/reviews/RightAnalyticsPanel";
 import InvoiceDetailView from "@/components/InvoiceDetailView";
 
 export default function MyReviewsPage() {
@@ -106,11 +105,6 @@ export default function MyReviewsPage() {
                     onSelectTab={setActiveTab} 
                     onSelectInvoice={handleSelectInvoice}
                   />
-                </div>
-                
-                {/* Right Sidebar: Analytics */}
-                <div className="w-full lg:w-80 shrink-0">
-                  <RightAnalyticsPanel analytics={analytics} />
                 </div>
               </div>
             </div>

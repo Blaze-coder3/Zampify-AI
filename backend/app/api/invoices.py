@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.exceptions import InvalidFileType, FileTooLarge
 from app.models import Invoice, ValidationResult, ProcessLedgerEvent, AuditLog, Vendor, PurchaseOrder
+from app.models.invoice import generate_invoice_id
 from pydantic import BaseModel
 from app.core.logging import get_logger
 
@@ -36,36 +37,71 @@ async def intake_document(
     Validates documents before they enter the processing queue.
     """
     import hashlib
+    import yaml
+    import fitz  # PyMuPDF
+    
+    try:
+        with open(settings.POLICY_FILE, "r") as f:
+            policies = yaml.safe_load(f)
+    except Exception:
+        policies = {}
+        
+    att_policy = policies.get("attachment_policy", {})
+    max_file_size_mb = att_policy.get("max_file_size_mb", 25)
+    warning_threshold_mb = att_policy.get("warning_threshold_mb", 10)
+    max_pages = att_policy.get("max_pages", 20)
     
     # 1. Extension Validation
     if not file.filename.lower().endswith(".pdf"):
-        raise InvalidFileType()
+        raise HTTPException(status_code=400, detail={"error": "Invalid file type", "message": f"File '{file.filename}' is not a PDF. Please upload PDF files only."})
 
     # 2. MIME Type Validation
     if file.content_type not in ["application/pdf", "application/x-pdf"]:
-        raise HTTPException(status_code=400, detail="Invalid MIME type. Must be application/pdf.")
+        raise HTTPException(status_code=400, detail={"error": "Invalid MIME type", "message": "Must be application/pdf."})
 
     # 3. File Size Check
     content = await file.read()
-    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    if len(content) > max_bytes:
-        raise FileTooLarge(settings.MAX_UPLOAD_SIZE_MB)
-        
-    # 4. Malware Scan (Placeholder)
-    logger.info(f"Scanning {file.filename} for malware (ClamAV placeholder)... Clean.")
+    file_size_mb = len(content) / (1024 * 1024)
+    if file_size_mb > max_file_size_mb:
+        raise HTTPException(status_code=400, detail={"error": "File too large", "message": f"File '{file.filename}' ({file_size_mb:.1f} MB) exceeds maximum allowed size of {max_file_size_mb} MB. Try compressing the PDF."})
     
-    # 5. Password Protected Check (Placeholder)
-    logger.info(f"Checking {file.filename} for encryption/passwords... Clear.")
+    is_warning_size = file_size_mb > warning_threshold_mb
 
-    # 6. Duplicate Hash Check
+    # 4. Check PDF Magic Bytes
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail={"error": "Invalid PDF", "message": "The uploaded file is not a valid PDF document."})
+
+    # 5. Duplicate Hash Check
     file_hash = hashlib.sha256(content).hexdigest()
-    # (In a real app, query the db to check if file_hash exists. 
-    # For now, we allow it but log the hash as part of the security gateway)
-    logger.info(f"File Hash (SHA-256): {file_hash}")
+    # Ensure Invoice model supports file_hash, check if duplicate exists
+    existing_invoice = (await db.execute(select(Invoice).where(Invoice.file_hash == file_hash))).scalar_one_or_none()
+    if existing_invoice:
+        raise HTTPException(status_code=400, detail={"error": "Duplicate File", "message": f"This exact file was already uploaded as invoice #{existing_invoice.id[:8].upper()}."})
 
+    # 6. PyMuPDF Inspections (Password, JS, Pages)
+    try:
+        doc = fitz.open(stream=content, filetype="pdf")
+        if doc.is_encrypted:
+            raise HTTPException(status_code=400, detail={"error": "Password Protected", "message": f"File '{file.filename}' is encrypted or password-protected. Please remove the password and try again."})
+        
+        if doc.page_count > max_pages:
+            raise HTTPException(status_code=400, detail={"error": "Too many pages", "message": f"File '{file.filename}' has {doc.page_count} pages, which exceeds the limit of {max_pages}."})
+            
+        # Basic JS detection in PDF (heuristic)
+        if b"/JS" in content or b"/JavaScript" in content:
+            # We don't necessarily reject, but we could. For now, log it.
+            logger.warning(f"Potential JavaScript found in {file.filename}")
+            
+    except fitz.FileDataError:
+        raise HTTPException(status_code=400, detail={"error": "Corrupt PDF", "message": "The PDF file appears to be corrupt or unreadable."})
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        logger.error(f"Error inspecting PDF {file.filename}: {e}")
+        
     try:
         # Save file to storage
-        invoice_id = str(uuid.uuid4())
+        invoice_id = generate_invoice_id()
         file_path = os.path.join(settings.UPLOAD_DIR, f"{invoice_id}.pdf")
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
         with open(file_path, "wb") as f:
@@ -83,6 +119,7 @@ async def intake_document(
             source="portal",
             status="received",
             received_at=datetime.now(timezone.utc),
+            file_hash=file_hash
         )
         db.add(invoice)
         await db.flush()
@@ -92,7 +129,7 @@ async def intake_document(
             invoice_id=invoice_id,
             user_id=current_user.id,
             action="CREATE",
-            reason=f"Status: received, Filename: {file.filename}",
+            reason=f"Status: received, Filename: {file.filename}" + (f" (Warning: {file_size_mb:.1f}MB)" if is_warning_size else ""),
         )
         db.add(audit)
         await db.commit()
@@ -103,7 +140,6 @@ async def intake_document(
             await pool.enqueue_job("process_invoice", invoice_id=invoice_id)
             await pool.close()
         except Exception as e:
-            import traceback; traceback.print_exc()
             logger.error("failed_to_enqueue", invoice_id=invoice_id, error=str(e))
 
         logger.info("invoice_uploaded", invoice_id=invoice_id, filename=file.filename)
@@ -119,7 +155,7 @@ async def intake_document(
             "status": "received",
             "message": "Invoice queued for processing",
         },
-        "meta": {"estimated_processing_time_seconds": 30},
+        "meta": {"estimated_processing_time_seconds": 30, "file_size_mb": round(file_size_mb, 2), "warning": is_warning_size},
     }
 
 
@@ -231,9 +267,62 @@ async def override_decision(
     invoice.status = new_status
     invoice.decision_explanation = payload.justification
     invoice.decided_at = datetime.now(timezone.utc)
+    invoice.decided_by_user_id = current_user.id
     
     await db.commit()
-    return {"status": "success", "invoice_id": invoice_id, "decision": payload.decision}
+    return {
+        "status": "success", 
+        "invoice_id": invoice_id, 
+        "decision": payload.decision,
+        "decided_by_name": current_user.name
+    }
+
+class NotifyPayload(BaseModel):
+    action: str
+    reason: str = ""
+    notes: str = ""
+
+from app.services.email_sender import send_notification_email
+
+@router.post("/{invoice_id}/notify")
+async def notify_invoice_action(
+    invoice_id: str,
+    payload: NotifyPayload,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    recipient = invoice.sender_email
+    if not recipient:
+        return {"status": "skipped", "message": "No sender email associated with this invoice (e.g., uploaded via portal)."}
+
+    # Dispatch email sending to background task
+    logger.info(f"Queuing {payload.action} email to {recipient} for invoice {invoice.invoice_number or invoice_id}")
+    background_tasks.add_task(
+        send_notification_email, 
+        recipient=recipient, 
+        invoice_number=invoice.invoice_number or invoice_id, 
+        action=payload.action, 
+        reason=payload.reason, 
+        notes=payload.notes
+    )
+    
+    # Audit log
+    audit = AuditLog(
+        invoice_id=invoice_id,
+        user_id=current_user.id,
+        action="EMAIL_SENT",
+        reason=f"Action: {payload.action} | To: {recipient}",
+    )
+    db.add(audit)
+    await db.commit()
+    
+    return {"status": "success", "recipient": recipient, "action": payload.action}
 
 @router.get("/communication-cases")
 async def get_communication_cases(
@@ -430,7 +519,10 @@ def _invoice_summary(inv: Invoice, vendor_name: str = None) -> dict:
         "priority": priority,
         "sla_remaining": sla_remaining,
         "assignee_id": inv.assignee_id,
+        "assigned_to_name": "Priya Sharma",
         "tags": inv.tags or [],
+        "triggered_rules": inv.triggered_rules,
+        "document_type": getattr(inv, "document_type", "invoice"),
     }
 
 

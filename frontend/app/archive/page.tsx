@@ -18,13 +18,31 @@ export default function SearchAndArchivePage() {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("All Documents");
+  const [dateFilter, setDateFilter] = useState("");
 
   const archiveSummary = useMemo(() => {
-    if (!invoices.length) return null;
+    if (!invoices.length) return {
+      kpis: {
+        total_invoices: 0,
+        archived: 0,
+        exceptions: 0,
+        total_spend: 0,
+        vendors_count: 0
+      },
+      status_distribution: {
+        approved: 0,
+        needs_review: 0,
+        escalated: 0,
+        overdue: 0,
+        closed: 0
+      },
+      recent_searches: []
+    };
     const total_invoices = invoices.length;
     const archived = invoices.filter(i => ['approved', 'rejected', 'completed', 'archived'].includes(i.status || '')).length;
     const exceptions = invoices.filter(i => ['needs_review', 'failed'].includes(i.status || '') || i.decision === 'investigating').length;
-    const total_spend = invoices.reduce((sum, i) => sum + (i.grand_total || 0), 0);
+    const total_spend = invoices.filter(i => i.status !== 'rejected').reduce((sum, i) => sum + (i.grand_total || 0), 0);
     const vendors = new Set(invoices.filter(i => i.vendor_name).map(i => i.vendor_name)).size;
     
     const status_distribution = {
@@ -96,15 +114,29 @@ export default function SearchAndArchivePage() {
         
         <div className="flex-1 flex overflow-hidden relative">
           <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="p-6 pb-2 max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
+            <div className="p-6 pb-2 max-w-[1600px] w-full mx-auto">
               <ArchiveHeader />
               <ArchiveStatCards summary={archiveSummary} />
-              <ArchiveSearchTabs searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+              <ArchiveSearchTabs 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                dateFilter={dateFilter}
+                onDateFilterChange={setDateFilter}
+              />
               
-              <div className="flex flex-col xl:flex-row gap-6 mt-4 flex-1 min-h-0">
+              <div className="flex flex-col xl:flex-row gap-6 mt-4">
                 {/* Main Left Content: The Table */}
-                <div className="flex-1 min-w-0 flex flex-col pb-6">
-                  <ArchiveTable invoices={invoices} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSelectInvoice={handleSelectInvoice} />
+                <div className="flex-1 min-w-0 pb-6">
+                  <ArchiveTable 
+                    invoices={invoices} 
+                    searchQuery={searchQuery} 
+                    onSearchChange={setSearchQuery} 
+                    activeTab={activeTab}
+                    dateFilter={dateFilter}
+                    onSelectInvoice={handleSelectInvoice} 
+                  />
                 </div>
                 
                 {/* Right Sidebar: Filters and Analytics */}

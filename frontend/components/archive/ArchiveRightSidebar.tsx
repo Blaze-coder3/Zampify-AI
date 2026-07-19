@@ -28,70 +28,6 @@ function FilterInput({ label, placeholder }: { label: string, placeholder: strin
   );
 }
 
-// Simple SVG Donut Chart for Documents by Status
-function StatusDonutChart({ data }: { data: Record<string, number> }) {
-  const approved = data["approved"] || 3358;
-  const needsReview = data["needs_review"] || 684;
-  const escalated = data["escalated"] || 256;
-  const overdue = data["overdue"] || 412;
-  const closed = data["closed"] || 184;
-  
-  const total = approved + needsReview + escalated + overdue + closed || 1;
-  
-  const c = 251.3; // Circumference = 2 * pi * r = 2 * 3.14159 * 40
-  
-  const p1 = (approved / total) * c;
-  const p2 = (needsReview / total) * c;
-  const p3 = (escalated / total) * c;
-  const p4 = (overdue / total) * c;
-  const p5 = (closed / total) * c;
-  
-  const offset2 = c - p1;
-  const offset3 = offset2 - p2;
-  const offset4 = offset3 - p3;
-  const offset5 = offset4 - p4;
-
-  const pct = (val: number) => Math.round((val / total) * 100);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
-        <div className="relative w-20 h-20 shrink-0">
-          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="14" strokeDasharray={`${p1} ${c}`} />
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="14" strokeDasharray={`${p2} ${c}`} strokeDashoffset={offset2} />
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#8b5cf6" strokeWidth="14" strokeDasharray={`${p3} ${c}`} strokeDashoffset={offset3} />
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" strokeWidth="14" strokeDasharray={`${p4} ${c}`} strokeDashoffset={offset4} />
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#64748b" strokeWidth="14" strokeDasharray={`${p5} ${c}`} strokeDashoffset={offset5} />
-          </svg>
-        </div>
-        
-        <div className="flex-1 flex flex-col gap-1.5 text-[10px]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-slate-600">Approved</span></div>
-            <span className="font-medium text-slate-800">{approved.toLocaleString()} ({pct(approved)}%)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500"></div><span className="text-slate-600">Needs Review</span></div>
-            <span className="font-medium text-slate-800">{needsReview.toLocaleString()} ({pct(needsReview)}%)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span className="text-slate-600">Escalated</span></div>
-            <span className="font-medium text-slate-800">{escalated.toLocaleString()} ({pct(escalated)}%)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500"></div><span className="text-slate-600">Overdue</span></div>
-            <span className="font-medium text-slate-800">{overdue.toLocaleString()} ({pct(overdue)}%)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-500"></div><span className="text-slate-600">Closed</span></div>
-            <span className="font-medium text-slate-800">{closed.toLocaleString()} ({pct(closed)}%)</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ArchiveRightSidebar({ summary }: { summary: ArchiveSummary | null }) {
   const recentSearches = summary?.recent_searches || [
@@ -131,31 +67,6 @@ export default function ArchiveRightSidebar({ summary }: { summary: ArchiveSumma
         </button>
       </div>
 
-      <hr className="border-slate-200" />
-
-      {/* Documents by Status */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-800 mb-4">Documents by Status</h3>
-        <StatusDonutChart data={summary?.status_distribution || {}} />
-      </div>
-
-      <hr className="border-slate-200" />
-
-      {/* Recent Searches */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-800 mb-4">Recent Searches</h3>
-        <ul className="flex flex-col gap-3">
-          {recentSearches.map((search, idx) => (
-            <li key={idx} className="flex items-start gap-2.5 group cursor-pointer">
-              <Clock size={14} className="text-slate-400 mt-0.5 group-hover:text-blue-500 transition-colors" />
-              <span className="text-xs text-slate-600 group-hover:text-blue-600 font-medium transition-colors">{search}</span>
-            </li>
-          ))}
-        </ul>
-        <button className="w-full mt-4 text-xs font-semibold text-blue-600 hover:underline">
-          View all saved searches
-        </button>
-      </div>
     </div>
   );
 }

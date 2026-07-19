@@ -28,7 +28,6 @@ export default function SystemGraphPage() {
       
       // Route protection
       if (user?.role === 'specialist') { router.push('/'); return; }
-      if (user?.role === 'manager') { router.push('/overview'); return; }
       
       const res = await getSystemStatus();
       setData(res);

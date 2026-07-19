@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Filter, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, MoreVertical, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { InvoiceSummary } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -52,13 +52,34 @@ export default function ReviewsTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  
+  const [riskFilter, setRiskFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [dateFilter, setDateFilter] = useState("");
+
+  const exportCSV = () => {
+    const headers = ["Invoice ID", "Vendor", "Date", "Amount", "Risk", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...paginatedRows.map(r => [r.id, `"${r.vendor}"`, r.date, `"${r.amount}"`, r.risk, r.status].join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "reviews_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const allRows = invoices.map((inv) => {
     const risk = (inv.overall_confidence || 100) < 70 ? "High" : (inv.overall_confidence || 100) < 90 ? "Medium" : "Low";
     
     return {
       original: inv,
-      id: inv.invoice_number,
+      id: inv.invoice_number || inv.id,
       vendor: inv.vendor_name || "Unknown",
       date: new Date(inv.received_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       amount: inv.grand_total ? `$${inv.grand_total.toLocaleString(undefined, {minimumFractionDigits: 2})}` : "$0.00",
@@ -84,8 +105,12 @@ export default function ReviewsTable({
     return true;
   });
 
-  // Filter rows by Search Query
+  // Filter rows by Search Query and dropdowns
   const searchFiltered = tabFiltered.filter(row => {
+    if (riskFilter !== "All" && row.risk !== riskFilter) return false;
+    if (statusFilter !== "All" && row.status !== statusFilter) return false;
+    if (dateFilter && new Date(row.original.received_at || Date.now()).toISOString().split('T')[0] !== dateFilter) return false;
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -146,23 +171,63 @@ export default function ReviewsTable({
             />
           </div>
           
-          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
-            <option>Risk Level (All)</option>
+          <select 
+            value={riskFilter}
+            onChange={(e) => { setRiskFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          >
+            <option value="All">Risk Level (All)</option>
+            <option value="High">High Risk</option>
+            <option value="Medium">Medium Risk</option>
+            <option value="Low">Low Risk</option>
           </select>
-          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
-            <option>Priority (All)</option>
+          <select 
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          >
+            <option value="All">Status (All)</option>
+            <option value="needs_review">Needs Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="escalated">Escalated</option>
+            <option value="triage">Triage</option>
           </select>
-          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
-            <option>Invoice Type (All)</option>
-          </select>
-          <select disabled className="opacity-50 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white min-w-[120px] focus:outline-none cursor-not-allowed">
-            <option>Status (All)</option>
-          </select>
+          
+          <input 
+            type="date"
+            value={dateFilter}
+            onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            title="Filter by Invoice Date"
+          />
         </div>
         
-        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
-          <Filter size={16} /> Filters
-        </button>
+        <div className="flex gap-2">
+          {(riskFilter !== "All" || statusFilter !== "All" || dateFilter !== "") && (
+            <button 
+              onClick={() => {
+                setRiskFilter("All");
+                setStatusFilter("All");
+                setDateFilter("");
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 px-2"
+            >
+              Clear All
+            </button>
+          )}
+          <button 
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <Download size={16} /> Export CSV
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Filter size={16} /> Filters
+          </button>
+        </div>
       </div>
 
       {/* Data Table */}

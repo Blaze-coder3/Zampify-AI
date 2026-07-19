@@ -142,12 +142,15 @@ export default function SmartWorkQueue({
       i.received_at && new Date(i.received_at) < twoHoursAgo &&
       !['approved', 'rejected', 'archived', 'failed'].includes(i.status)
     );
-  } else if (activeFilter === 'ready_approve') {
-    filteredInvoices = filteredInvoices.filter(i => i.status === 'validated' && i.decision !== 'approved');
-  } else if (activeFilter === 'duplicates') {
-    // We can't filter by duplicate rule here easily without `validations` array in `InvoiceSummary`, 
-    // but we can fake it or if we have it in the real payload, use it.
-    filteredInvoices = filteredInvoices.filter(i => i.status === 'failed' || i.overall_confidence! < 0.5); // Heuristic
+  } else if (activeFilter === 'approved' || activeFilter === 'ready_approve') {
+    filteredInvoices = filteredInvoices.filter(i => i.status === 'needs_review' && i.overall_confidence && i.overall_confidence >= 80);
+  } else if (activeFilter === 'duplicate') {
+    filteredInvoices = filteredInvoices.filter(i => {
+      if (i.triggered_rules && Array.isArray(i.triggered_rules)) {
+        return i.triggered_rules.some((r: any) => r.rule_id === 'BR-004' && r.status !== 'pass');
+      }
+      return false;
+    });
   }
   // Text search
   if (filterQuery) {
@@ -231,7 +234,7 @@ export default function SmartWorkQueue({
           <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             ({totalItems})
           </span>
-          <HelpCircle className="w-4 h-4 text-gray-400 ml-1" />
+          <HelpCircle className="w-4 h-4 text-gray-400 ml-1 cursor-help" title="This smart queue prioritizes urgent items and detects duplicates automatically." />
         </div>
         
         <div className="flex items-center gap-3">
@@ -251,11 +254,6 @@ export default function SmartWorkQueue({
             <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" onChange={handleSelectAll} checked={selectedIds.size > 0 && selectedIds.size === totalItems} />
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select All</span>
          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowAssignModal(true)} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Assign</button>
-            <button onClick={() => setShowTagModal(true)} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50">Tag</button>
-            {!isCommunicationView && user.role !== 'admin' && <button onClick={handleBulkApprove} disabled={selectedIds.size === 0} className="px-3 py-1 bg-white border border-slate-200 text-emerald-600 text-xs font-medium rounded shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50">Approve Selected</button>}
-         </div>
       </div>
 
       {/* Data Table */}
@@ -266,12 +264,14 @@ export default function SmartWorkQueue({
               <th className="px-4 py-3 w-10"></th>
               {!isCommunicationView ? (
                 <>
-                  <th onClick={() => handleSort('id')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Invoice {sortConfig?.key==='id' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('id')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">ID {sortConfig?.key==='id' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('invoice_number')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Invoice ID {sortConfig?.key==='invoice_number' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                   <th onClick={() => handleSort('vendor_name')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Vendor {sortConfig?.key==='vendor_name' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                   <th onClick={() => handleSort('ai_recommendation')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">AI Recommendation {sortConfig?.key==='ai_recommendation' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                   <th onClick={() => handleSort('overall_confidence')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Confidence {sortConfig?.key==='overall_confidence' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
-                  <th onClick={() => handleSort('received_at')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">SLA {sortConfig?.key==='received_at' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('received_at')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">SLA Remaining {sortConfig?.key==='received_at' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                   <th onClick={() => handleSort('priority')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Priority {sortConfig?.key==='priority' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
+                  <th onClick={() => handleSort('assignee_id')} className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-50">Assigned To {sortConfig?.key==='assignee_id' && (sortConfig.direction==='asc'?'↑':'↓')}</th>
                 </>
               ) : (
                 <>
@@ -313,8 +313,11 @@ export default function SmartWorkQueue({
                       <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedIds.has(inv.id)} onChange={() => handleSelectOne(inv.id)} onClick={e => e.stopPropagation()}/>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-slate-800">{inv.id.substring(0,8).toUpperCase()}</span>
+                    <span className="text-xs font-bold text-slate-800">{inv.id}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-800">{inv.invoice_number || "-"}</span>
                       <span className="text-[10px] text-slate-500">${inv.grand_total?.toLocaleString() || '0.00'}</span>
                     </div>
                   </td>
@@ -350,6 +353,14 @@ export default function SmartWorkQueue({
                       {priority === 'Low' && <ArrowDown size={12} className="mr-1" />}
                       {priority}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[9px] font-bold text-blue-700">
+                        {inv.assigned_to_name ? inv.assigned_to_name.split(' ').map(n => n[0]).join('') : "U"}
+                      </div>
+                      <span className="text-xs font-medium text-slate-700">{inv.assigned_to_name || "Unassigned"}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors" />

@@ -1,7 +1,12 @@
 import { useState, useMemo } from "react";
-import { ZoomIn, ZoomOut, Download, Maximize, LayoutTemplate, Type } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, Maximize, LayoutTemplate, Type, Loader2 } from "lucide-react";
 import { InvoiceDetail } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface DocumentViewerProps {
   invoice: InvoiceDetail;
@@ -12,6 +17,7 @@ export default function DocumentViewer({ invoice }: DocumentViewerProps) {
   const [showLayout, setShowLayout] = useState(false);
   const [activeBox, setActiveBox] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [pageWidth, setPageWidth] = useState<number>(595);
 
   const handleDownload = () => {
     if (invoice.pdf_storage_path) {
@@ -25,12 +31,24 @@ export default function DocumentViewer({ invoice }: DocumentViewerProps) {
     }
   };
 
-  // Auto-detect coordinate scale based on extraction method
-  // Native PDF viewers add padding around FitH. We assume ~16px padding on each side.
-  const viewerWidth = 800 - 32; // 768px actual page width
-  const scale = invoice.extraction_method?.includes("scanned") ? viewerWidth / 2480 : viewerWidth / 595;
-  const offsetX = 16;
-  const offsetY = 16;
+  const onPageLoadSuccess = (page: any) => {
+    setPageWidth(page.originalWidth || page.getViewport({ scale: 1 }).width);
+  };
+
+  const viewerWidth = 800;
+  
+  // If we're extracting from a scanned image via YOLO it might be in image pixels (e.g., 2480 width).
+  // If it's digital, PyMuPDF outputs points.
+  // We determine the true scale factor between what the backend used vs our rendered width.
+  // Actually, PyMuPDF coordinates are always based on the PDF's internal dimensions, which react-pdf also uses!
+  // EXCEPT when we rasterize to 300 DPI for scanned images in the backend. 
+  // Wait, the backend scanned logic: `mat = fitz.Matrix(300 / 72, 300 / 72); pix = page.get_pixmap(matrix=mat)`
+  // This means the scanned bounding boxes are 300/72 (4.1666x) larger than PDF points.
+  const isScanned = invoice.extraction_method?.includes("scanned");
+  const backendCoordinateSpaceWidth = isScanned ? (pageWidth * (300 / 72)) : pageWidth;
+  const scale = viewerWidth / backendCoordinateSpaceWidth;
+  const offsetX = 0;
+  const offsetY = 0;
 
   // Safe getter for bounding boxes from our new backend structure
   const fields = invoice.ocr_bounding_boxes?.fields || {};
@@ -49,13 +67,6 @@ export default function DocumentViewer({ invoice }: DocumentViewerProps) {
             >
               <Type size={14} /> <span>Fields</span>
             </button>
-            <button 
-              onClick={() => setShowLayout(!showLayout)}
-              className={cn("flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-medium transition-colors", 
-                showLayout ? "bg-purple-600 text-white" : "bg-slate-700 hover:bg-slate-600 text-slate-300")}
-            >
-              <LayoutTemplate size={14} /> <span>Layout</span>
-            </button>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -69,20 +80,31 @@ export default function DocumentViewer({ invoice }: DocumentViewerProps) {
       </div>
       
       <div className="flex-1 overflow-auto bg-slate-200 p-8 flex justify-center items-start relative">
-        <div className="bg-white shadow-xl relative transition-transform duration-200" style={{ width: '800px', minHeight: '1050px', transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
+        <div className="bg-white shadow-xl relative transition-transform duration-200" style={{ width: `${viewerWidth}px`, minHeight: '1050px', transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
           
           {/* Document Render */}
           {invoice.pdf_storage_path ? (
-            <>
-              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded z-50 pointer-events-none">PDF Loaded</div>
-              <iframe 
-                src={`http://localhost:8000/api/v1/uploads/${invoice.id}.pdf#toolbar=0&view=FitH&navpanes=0&scrollbar=0`}
-                className="absolute inset-0 w-full h-full border-0 z-0 pointer-events-none"
-                style={{ overflow: 'hidden' }}
-                scrolling="no"
-                title="Invoice PDF"
-              />
-            </>
+            <div className="relative">
+              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded z-50 pointer-events-none shadow">PDF Loaded</div>
+              <Document
+                file={`http://localhost:8000/api/v1/uploads/${invoice.id}.pdf`}
+                loading={
+                  <div className="flex justify-center items-center h-[1050px]">
+                    <Loader2 className="animate-spin text-slate-400" size={32} />
+                  </div>
+                }
+                className="w-full h-full"
+              >
+                <Page 
+                  pageNumber={1} 
+                  width={viewerWidth}
+                  onLoadSuccess={onPageLoadSuccess}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  className="shadow-sm"
+                />
+              </Document>
+            </div>
           ) : (
           <div className="absolute inset-0 p-12 pointer-events-none opacity-50 grayscale z-0">
             <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded z-50 pointer-events-none">Mock Mode</div>
@@ -93,7 +115,7 @@ export default function DocumentViewer({ invoice }: DocumentViewerProps) {
               </div>
               <div className="text-right">
                 <h2 className="text-4xl font-bold text-slate-300 mb-2">INVOICE</h2>
-                <p className="font-semibold text-slate-700"># {invoice.invoice_number || invoice.id.substring(0,8).toUpperCase()}</p>
+                <p className="font-semibold text-slate-700"># {invoice.invoice_number || invoice.id}</p>
                 <p className="text-slate-500">Date: {invoice.invoice_date || 'Oct 24, 2024'}</p>
               </div>
             </div>
