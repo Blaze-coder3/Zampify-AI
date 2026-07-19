@@ -5,6 +5,14 @@
 
 ---
 
+## 📚 Documentation
+
+- [**Developer & Local Setup Guide**](docs/DEVELOPER_GUIDE.md) - Instructions to run the full stack locally.
+- [**Deployment Guide (Free Tier)**](docs/DEPLOYMENT_GUIDE.md) - Step-by-step instructions to deploy Zampify AI to Render & Vercel.
+- [**System Architecture**](docs/Invoice_Processing_Architecture.md) - Deep dive into the AI agents and data flow.
+
+---
+
 ## Overview
 
 Zampify AI is an enterprise-grade AI workflow platform that automates the complete Accounts Payable (AP) invoice lifecycle. Instead of simply extracting data from invoices, it understands incoming vendor emails, validates invoices against procurement records, applies configurable business policies, detects anomalies, and generates transparent payment decisions with a complete audit trail.
