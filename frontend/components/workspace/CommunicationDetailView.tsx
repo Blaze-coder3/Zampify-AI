@@ -135,7 +135,9 @@ export default function CommunicationDetailView({ caseDetail, onClose }: Props) 
                  </div>
                  
                  <div className="mt-4 pt-3 border-t border-blue-200/50 flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Confidence Score: {caseDetail.aiConfidence * 100}%</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Confidence Score: {Math.round(caseDetail.aiConfidence)}%</span>
+                    </div>
                     <span className="text-xs text-blue-500 bg-white px-2 py-1 rounded-md border border-blue-100 font-medium">Sent Automatically</span>
                  </div>
               </div>

@@ -119,12 +119,12 @@ export default function InvoiceDetailView({ invoice, onClose, onRefresh }: Invoi
                       <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
                         <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Extracted Data</span>
                         <div className="flex items-center text-[10px] text-slate-500">
-                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span> {Math.round((invoice.overall_confidence || 0) * 100)}% Conf
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span> {Math.round(invoice.overall_confidence || 0)}% Conf
                         </div>
                       </div>
                       <div className="p-4 space-y-3">
                         {Object.entries(invoice.raw_extracted_data || {}).filter(([k]) => k !== 'line_items').map(([key, val]) => {
-                           const confPct = invoice.field_confidences?.[key] ? Math.round(invoice.field_confidences[key] * 100) : 95;
+                           const confPct = invoice.field_confidences?.[key] ? Math.round(invoice.field_confidences[key]) : 95;
                            let displayVal = String(val);
                            if (val && typeof val === 'object' && 'value' in val) {
                                displayVal = String((val as any).value);

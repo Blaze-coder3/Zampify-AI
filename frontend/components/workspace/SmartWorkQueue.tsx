@@ -420,9 +420,9 @@ export default function SmartWorkQueue({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={cn("h-full rounded-full", c.aiConfidence >= 0.9 ? "bg-emerald-500" : c.aiConfidence >= 0.7 ? "bg-amber-500" : "bg-red-500")} style={{width: `${Math.round(c.aiConfidence * 100)}%`}} />
+                            <div className={cn("h-full rounded-full", c.aiConfidence >= 90 ? "bg-emerald-500" : c.aiConfidence >= 70 ? "bg-amber-500" : "bg-red-500")} style={{width: `${Math.round(c.aiConfidence)}%`}} />
                         </div>
-                        <span className="text-xs font-bold text-slate-700">{Math.round(c.aiConfidence * 100)}%</span>
+                        <span className="text-xs font-bold text-slate-700">{Math.round(c.aiConfidence)}%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">

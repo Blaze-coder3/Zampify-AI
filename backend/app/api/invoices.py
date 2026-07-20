@@ -384,7 +384,7 @@ async def get_communication_cases(
             "lastUpdatedBy": "System",
             "priority": "High" if not po else "Medium",
             "status": case_status,
-            "aiConfidence": inv.overall_confidence or 0.85,
+            "aiConfidence": inv.overall_confidence or 85.0,
             "createdAt": inv.received_at.isoformat() if inv.received_at else datetime.now(timezone.utc).isoformat(),
             "updatedAt": inv.updated_at.isoformat() if inv.updated_at else datetime.now(timezone.utc).isoformat(),
         })
