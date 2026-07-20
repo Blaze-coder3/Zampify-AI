@@ -59,6 +59,7 @@ async def zampify_exception_handler(request: Request, exc: ZampifyException):
 from fastapi.staticfiles import StaticFiles
 
 # Register routers
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/api/v1/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
