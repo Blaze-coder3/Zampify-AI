@@ -79,3 +79,9 @@ async def health_check():
         "version": settings.APP_VERSION,
         "service": settings.APP_NAME,
     }
+
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
