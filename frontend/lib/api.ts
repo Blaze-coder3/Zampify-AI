@@ -272,10 +272,10 @@ export interface AnalyticsSummary {
     sla_compliance: string;
     avg_time: string;
   };
-  status_distribution?: any;
-  risk_distribution?: { high: number; medium: number; low: number; };
-  sla_compliance?: any[];
-  top_vendors?: any[];
+  status_distribution: Record<string, number>;
+  risk_distribution: { high: number; medium: number; low: number; };
+  sla_compliance: { date: string; value: number }[];
+  top_vendors: { vendor_name: string; count: number; total_amount: number }[];
 }
 
 export interface WSMessage {
@@ -288,13 +288,6 @@ export interface WSMessage {
 }
 
 // Analytics
-export interface AnalyticsSummary {
-  status_distribution: Record<string, number>;
-  risk_distribution: { high: number; medium: number; low: number };
-  top_vendors: { vendor_name: string; count: number; total_amount: number }[];
-  sla_compliance: { date: string; value: number }[];
-}
-
 export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
   return apiFetch<AnalyticsSummary>("/analytics/summary");
 }
