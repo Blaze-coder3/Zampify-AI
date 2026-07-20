@@ -166,7 +166,7 @@ export interface InvoiceSummary {
   assignee_id?: string | null;
   assigned_to_name?: string;
   tags?: string[];
-  triggered_rules?: any[];
+  triggered_rules?: string[] | null;
   document_type?: string;
 }
 
@@ -239,7 +239,7 @@ export interface InvoiceDetail extends InvoiceSummary {
   ocr_bounding_boxes?: { fields?: Record<string, number[]>, layout_regions?: any[] } | null;
   decision_explanation: string | null;
   decision_evidence: { evidence: ValidationResult[] } | null;
-  triggered_rules: string[] | null;
+  triggered_rules?: string[] | null;
   policy_version: string | null;
   validations: ValidationResult[];
   pdf_storage_path?: string | null;
